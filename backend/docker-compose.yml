@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # Main FastAPI application
+  music-api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://musicuser:musicpass@music-db:5432/musicdb
+      - REDIS_URL=redis://music-redis:6379/0
+      - ELASTICSEARCH_URL=http://music-search:9200
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+    volumes:
+      - ./music:/app/music
+      - ./images:/app/images
+    depends_on:
+      - music-db
+      - music-redis
+      - music-search
+    restart: unless-stopped
+
+  # PostgreSQL database
+  music-db:
+    image: postgres:15
+    ports:
+      - "5433:5432"  # External 5433 to avoid Immich conflict
+    environment:
+      - POSTGRES_DB=musicdb
+      - POSTGRES_USER=musicuser
+      - POSTGRES_PASSWORD=musicpass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    restart: unless-stopped
+
+  # Redis cache and queue
+  music-redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"  # External 6380 to avoid Immich conflict
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # Elasticsearch for search
+  music-search:
+    image: elasticsearch:8.11.1
+    ports:
+      - "9201:9200"  # External 9201 to avoid conflicts
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: unless-stopped
+
+  # Background worker for downloads
+  music-worker:
+    build: .
+    command: celery -A app.worker worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://musicuser:musicpass@music-db:5432/musicdb
+      - REDIS_URL=redis://music-redis:6379/0
+      - ELASTICSEARCH_URL=http://music-search:9200
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+    volumes:
+      - ./music:/app/music
+      - ./images:/app/images
+    depends_on:
+      - music-db
+      - music-redis
+      - music-search
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  elasticsearch_data:
