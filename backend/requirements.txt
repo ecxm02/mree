@@ -14,11 +14,10 @@ alembic==1.12.1
 psycopg2-binary==2.9.9
 
 # Redis for caching and queues
-redis==5.0.1
+redis==4.6.0
 aioredis==2.0.1
 
 # Background jobs
-celery==5.3.4
 celery[redis]==5.3.4
 
 # Search engine
