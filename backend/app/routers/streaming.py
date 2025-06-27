@@ -21,25 +21,26 @@ async def stream_song(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Stream a song and update last_streamed timestamp"""
+    """Stream a song and update last_played timestamp (Elasticsearch-centric approach)"""
     try:
         # Validate Spotify ID
         spotify_id = validate_spotify_id(spotify_id)
         
         # Get song from Elasticsearch
         es_service = ElasticsearchService()
-        song_data = await es_service.get_song(spotify_id)
+        song_doc = await es_service.get_song(spotify_id)
         
-        if not song_data:
-            raise HTTPException(status_code=404, detail="Song not found")
+        if not song_doc or song_doc.get("download_status") != "completed":
+            raise HTTPException(status_code=404, detail="Song not found or not downloaded")
         
         # Check if file exists
-        file_path = Path(song_data.get('file_path', ''))
+        file_path_str = song_doc.get("file_path")
+        if not file_path_str:
+            raise HTTPException(status_code=404, detail="Audio file path not set")
+            
+        file_path = Path(file_path_str)
         if not file_path.exists():
-            raise HTTPException(status_code=404, detail="Audio file not found")
-        
-        # Update last_streamed timestamp (this prevents cleanup)
-        await es_service.update_last_streamed(spotify_id)
+            raise HTTPException(status_code=404, detail="Audio file not found on disk")
         
         # Update user's play count if they have it in their library
         user_library_entry = db.query(UserLibrary).filter(
@@ -53,11 +54,14 @@ async def stream_song(
             user_library_entry.last_played = datetime.utcnow()
             db.commit()
         
+        # Update last_streamed timestamp in Elasticsearch
+        await es_service.update_last_streamed(spotify_id)
+        
         # Return the audio file
         return FileResponse(
             file_path,
             media_type="audio/mpeg",
-            filename=f"{song_data.get('title', 'song')}.mp3"
+            filename=f"{song_doc.get('title', 'Unknown')} - {song_doc.get('artist', 'Unknown')}.mp3"
         )
         
     except Exception as e:
@@ -75,12 +79,12 @@ async def mark_song_played(
         # Validate Spotify ID
         spotify_id = validate_spotify_id(spotify_id)
         
-        # Update last_streamed in Elasticsearch
+        # Get song from Elasticsearch to verify it exists and is completed
         es_service = ElasticsearchService()
-        success = await es_service.update_last_streamed(spotify_id)
+        song_doc = await es_service.get_song(spotify_id)
         
-        if not success:
-            raise HTTPException(status_code=404, detail="Song not found")
+        if not song_doc or song_doc.get("download_status") != "completed":
+            raise HTTPException(status_code=404, detail="Song not found or not downloaded")
         
         # Update user's play count if they have it in their library
         user_library_entry = db.query(UserLibrary).filter(
@@ -93,6 +97,9 @@ async def mark_song_played(
             from datetime import datetime
             user_library_entry.last_played = datetime.utcnow()
             db.commit()
+        
+        # Update last_streamed timestamp in Elasticsearch
+        await es_service.update_last_streamed(spotify_id)
         
         return {"message": "Song marked as played", "spotify_id": spotify_id}
         

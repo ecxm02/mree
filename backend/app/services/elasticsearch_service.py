@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Any
 import json
 import logging
 from pathlib import Path
+from datetime import datetime
 
 from ..config import settings
 
@@ -30,6 +31,7 @@ class ElasticsearchService:
                         "thumbnail_url": {"type": "keyword"},
                         "youtube_url": {"type": "keyword"},
                         "download_count": {"type": "integer"},
+                        "download_status": {"type": "keyword"},  # pending, downloading, completed, failed
                         "created_at": {"type": "date"},
                         "updated_at": {"type": "date"},
                         "last_streamed": {"type": "date"}  # Track when song was last played
@@ -145,8 +147,6 @@ class ElasticsearchService:
     async def update_last_streamed(self, spotify_id: str) -> bool:
         """Update the last_streamed timestamp when a song is played"""
         try:
-            from datetime import datetime
-            
             # Update only the last_streamed field
             update_body = {
                 "doc": {
@@ -189,3 +189,87 @@ class ElasticsearchService:
         # Organize by first 2 characters of spotify_id for better file system distribution
         prefix = spotify_id[:2]
         return f"/app/music/{prefix}/{spotify_id}.mp3"
+    
+    # Synchronous methods for Celery tasks (Celery can't handle async)
+    
+    def get_song_sync(self, spotify_id: str) -> Optional[Dict[str, Any]]:
+        """Synchronous version of get_song for Celery tasks"""
+        try:
+            result = self.es.get(index=self.songs_index, id=spotify_id)
+            return result["_source"]
+        except Exception:
+            return None
+    
+    def add_song_sync(self, song_data: Dict[str, Any]) -> bool:
+        """Synchronous version of add_song for Celery tasks"""
+        try:
+            doc_id = song_data["spotify_id"]
+            result = self.es.index(
+                index=self.songs_index,
+                id=doc_id,
+                body=song_data,
+                refresh=True  # Make immediately searchable
+            )
+            logger.info(f"Added song to Elasticsearch: {doc_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error adding song to Elasticsearch: {e}")
+            return False
+    
+    def update_song_sync(self, spotify_id: str, update_data: Dict[str, Any]) -> bool:
+        """Synchronous version of update_song for Celery tasks"""
+        try:
+            result = self.es.update(
+                index=self.songs_index,
+                id=spotify_id,
+                body={"doc": update_data},
+                refresh=True
+            )
+            logger.info(f"Updated song in Elasticsearch: {spotify_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating song in Elasticsearch: {e}")
+            return False
+    
+    def update_song_status_sync(self, spotify_id: str, status: str) -> bool:
+        """Synchronous version of update_song_status for Celery tasks"""
+        return self.update_song_sync(spotify_id, {
+            "download_status": status,
+            "updated_at": datetime.utcnow().isoformat()
+        })
+    
+    def increment_download_count_sync(self, spotify_id: str) -> bool:
+        """Synchronous version of increment_download_count for Celery tasks"""
+        try:
+            # Use update script to atomically increment download count
+            result = self.es.update(
+                index=self.songs_index,
+                id=spotify_id,
+                body={
+                    "script": {
+                        "source": "ctx._source.download_count = (ctx._source.download_count ?: 0) + 1; ctx._source.updated_at = params.timestamp",
+                        "params": {"timestamp": datetime.utcnow().isoformat()}
+                    }
+                },
+                refresh=True
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error incrementing download count: {e}")
+            return False
+    
+    def search_raw_sync(self, query: Dict) -> Dict:
+        """Execute raw Elasticsearch query (synchronous for Celery tasks)"""
+        try:
+            return self.es.search(index=self.songs_index, body=query)
+        except Exception as e:
+            logger.error(f"Error executing raw search: {e}")
+            return {"hits": {"hits": []}}
+    
+    async def search_raw(self, query: Dict) -> Dict:
+        """Execute raw Elasticsearch query (async for API endpoints)"""
+        try:
+            return self.es.search(index=self.songs_index, body=query)
+        except Exception as e:
+            logger.error(f"Error executing raw search: {e}")
+            return {"hits": {"hits": []}}

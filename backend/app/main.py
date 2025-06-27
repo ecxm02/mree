@@ -7,8 +7,7 @@ import logging
 
 from .config import settings
 from .database import init_db
-from .routers import auth, search, health, streaming, admin
-from .services.elasticsearch_service import ElasticsearchService
+from .routers import auth, search, health, streaming, admin, tasks
 from .middleware.rate_limiting import RateLimitMiddleware
 from .middleware.error_handling import ErrorHandlingMiddleware, create_error_handler
 
@@ -25,11 +24,7 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting Music Streaming API...")
     await init_db()
     
-    # Initialize Elasticsearch
-    es_service = ElasticsearchService()
-    await es_service.ensure_index_exists()
-    
-    logger.info("✅ Database and Elasticsearch initialized")
+    logger.info("✅ Database initialized")
     
     yield
     
@@ -72,6 +67,7 @@ app.mount("/images", StaticFiles(directory=settings.IMAGE_STORAGE_PATH), name="i
 app.include_router(auth.router, prefix="/api")
 app.include_router(search.router, prefix="/api")
 app.include_router(streaming.router, prefix="/api")
+app.include_router(tasks.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 
