@@ -7,7 +7,7 @@ import logging
 
 from .config import settings
 from .database import init_db
-from .routers import auth, search, health
+from .routers import auth, search, health, streaming, admin
 from .services.elasticsearch_service import ElasticsearchService
 from .middleware.rate_limiting import RateLimitMiddleware
 from .middleware.error_handling import ErrorHandlingMiddleware, create_error_handler
@@ -71,6 +71,8 @@ app.mount("/images", StaticFiles(directory=settings.IMAGE_STORAGE_PATH), name="i
 # Include routers
 app.include_router(auth.router, prefix="/api")
 app.include_router(search.router, prefix="/api")
+app.include_router(streaming.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 
 
@@ -80,14 +82,4 @@ async def root():
         "message": "Music Streaming API",
         "version": "1.0.0",
         "status": "running"
-    }
-
-
-@app.get("/api/health")
-async def health_check():
-    """Health check endpoint for monitoring"""
-    
-    return {
-        "status": "healthy",
-        "timestamp": "2025-06-26T11:52:00Z"
     }

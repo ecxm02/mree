@@ -186,3 +186,69 @@ async def get_popular_songs(
         )
         for song in popular_songs
     ]
+
+@router.post("/local", response_model=List[SongResponse])
+async def search_local_songs(
+    search: SongSearch,
+    current_user: User = Depends(get_current_user)
+):
+    """Search downloaded songs by title, artist, or album"""
+    
+    es_service = ElasticsearchService()
+    
+    try:
+        # Search in Elasticsearch using title, artist, album
+        results = await es_service.search_songs(search.query, limit=search.limit)
+        
+        return [
+            SongResponse(
+                id=0,  # Not using database ID since this is Elasticsearch
+                title=song["title"],
+                artist=song["artist"],
+                album=song["album"],
+                duration=song["duration"],
+                spotify_id=song["spotify_id"],
+                youtube_url=song.get("youtube_url"),
+                file_path=song["file_path"],
+                thumbnail_url=song.get("thumbnail_url"),
+                download_status="completed",  # Only completed songs are in Elasticsearch
+                created_at=song.get("created_at")
+            )
+            for song in results
+        ]
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Local search failed: {str(e)}")
+
+@router.get("/local/by-artist/{artist_name}", response_model=List[SongResponse])
+async def search_by_artist(
+    artist_name: str,
+    limit: int = 10,
+    current_user: User = Depends(get_current_user)
+):
+    """Search downloaded songs by artist name"""
+    
+    es_service = ElasticsearchService()
+    
+    try:
+        results = await es_service.search_songs(f"artist:{artist_name}", limit=limit)
+        
+        return [
+            SongResponse(
+                id=0,
+                title=song["title"],
+                artist=song["artist"],
+                album=song["album"],
+                duration=song["duration"],
+                spotify_id=song["spotify_id"],
+                youtube_url=song.get("youtube_url"),
+                file_path=song["file_path"],
+                thumbnail_url=song.get("thumbnail_url"),
+                download_status="completed",
+                created_at=song.get("created_at")
+            )
+            for song in results
+        ]
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Artist search failed: {str(e)}")

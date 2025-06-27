@@ -57,3 +57,25 @@ class SpotifyService:
         except Exception as e:
             logger.error(f"Spotify album fetch error: {e}")
             raise
+    
+    async def get_track_with_images(self, track_id: str) -> Dict[str, Any]:
+        """Get detailed track information with all image sizes"""
+        try:
+            logger.info(f"Getting Spotify track with images: {track_id}")
+            track = self.sp.track(track_id)
+            
+            # Extract all image sizes
+            images = track["album"]["images"]
+            image_data = {
+                "large": images[0]["url"] if len(images) > 0 else None,      # 640x640
+                "medium": images[1]["url"] if len(images) > 1 else None,     # 300x300  
+                "small": images[2]["url"] if len(images) > 2 else None       # 64x64
+            } if images else {}
+            
+            # Add image data to track info
+            track["image_urls"] = image_data
+            
+            return track
+        except Exception as e:
+            logger.error(f"Spotify track with images fetch error: {e}")
+            raise

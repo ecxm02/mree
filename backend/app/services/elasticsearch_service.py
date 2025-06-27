@@ -31,7 +31,8 @@ class ElasticsearchService:
                         "youtube_url": {"type": "keyword"},
                         "download_count": {"type": "integer"},
                         "created_at": {"type": "date"},
-                        "updated_at": {"type": "date"}
+                        "updated_at": {"type": "date"},
+                        "last_streamed": {"type": "date"}  # Track when song was last played
                     }
                 }
             }
@@ -139,6 +140,48 @@ class ElasticsearchService:
             
         except Exception as e:
             logger.error(f"Error getting popular songs: {e}")
+            return []
+    
+    async def update_last_streamed(self, spotify_id: str) -> bool:
+        """Update the last_streamed timestamp when a song is played"""
+        try:
+            from datetime import datetime
+            
+            # Update only the last_streamed field
+            update_body = {
+                "doc": {
+                    "last_streamed": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.utcnow().isoformat()
+                }
+            }
+            
+            result = self.es.update(
+                index=self.songs_index,
+                id=spotify_id,
+                body=update_body
+            )
+            
+            logger.debug(f"Updated last_streamed for song: {spotify_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating last_streamed for {spotify_id}: {e}")
+            return False
+
+    async def get_all_songs(self) -> List[Dict[str, Any]]:
+        """Get all songs from Elasticsearch for cleanup operations"""
+        try:
+            search_body = {
+                "query": {"match_all": {}},
+                "size": 10000,  # Adjust based on your expected song count
+                "_source": ["spotify_id", "file_path", "file_size", "created_at", "last_streamed"]
+            }
+            
+            result = self.es.search(index=self.songs_index, body=search_body)
+            return [hit["_source"] for hit in result["hits"]["hits"]]
+            
+        except Exception as e:
+            logger.error(f"Error getting all songs: {e}")
             return []
     
     def get_file_path(self, spotify_id: str) -> str:
