@@ -18,17 +18,10 @@ def get_thumbnail_url(song_doc: dict) -> Optional[str]:
     """Get the appropriate thumbnail URL for a song with failsafe re-download"""
     spotify_id = song_doc.get("spotify_id")
     original_url = song_doc.get("original_thumbnail_url")
-    
     if spotify_id:
         image_service = ImageService()
         return image_service.get_image_url_with_fallback(spotify_id, original_url)
-    
     return original_url
-        if spotify_id:
-            return f"/api/images/albums/{spotify_id}.jpg"
-    
-    # Fallback to original Spotify URL
-    return song_doc.get("original_thumbnail_url")
 
 @router.post("/spotify", response_model=SearchResponse)
 async def search_spotify(
