@@ -4,6 +4,7 @@ from .database import SessionLocal
 from .models.song import UserLibrary
 from .services.download_service import DownloadService
 from .services.elasticsearch_service import ElasticsearchService
+from .services.backup_service import backup_service
 from datetime import datetime
 import logging
 
@@ -212,3 +213,58 @@ def cleanup_failed_downloads():
     except Exception as exc:
         logger.error(f"Cleanup task failed: {str(exc)}")
         return {"status": "error", "message": str(exc)}
+
+@current_app.task
+def daily_backup():
+    """
+    Daily backup task for all databases.
+    Scheduled to run at the configured hour (default 3 AM).
+    """
+    try:
+        logger.info("Starting daily backup task...")
+        
+        # Create backup
+        backup_result = backup_service.create_backup()
+        
+        if backup_result["status"] == "success":
+            logger.info(f"Daily backup completed successfully: {backup_result.get('backup_path')}")
+            
+            # Clean up old backups
+            cleanup_result = backup_service.cleanup_old_backups()
+            
+            if cleanup_result["status"] == "success":
+                logger.info(f"Cleaned up {cleanup_result['deleted_count']} old backups, freed {cleanup_result['freed_space_mb']} MB")
+            
+            return {
+                "status": "success",
+                "backup": backup_result,
+                "cleanup": cleanup_result
+            }
+        else:
+            logger.error(f"Daily backup failed: {backup_result.get('error')}")
+            return backup_result
+            
+    except Exception as exc:
+        logger.error(f"Daily backup task failed: {str(exc)}")
+        return {"status": "error", "message": str(exc)"}
+
+@current_app.task
+def manual_backup():
+    """
+    Manual backup task that can be triggered on demand.
+    """
+    try:
+        logger.info("Starting manual backup task...")
+        
+        backup_result = backup_service.create_backup()
+        
+        if backup_result["status"] == "success":
+            logger.info(f"Manual backup completed successfully: {backup_result.get('backup_path')}")
+        else:
+            logger.error(f"Manual backup failed: {backup_result.get('error')}")
+        
+        return backup_result
+        
+    except Exception as exc:
+        logger.error(f"Manual backup task failed: {str(exc)}")
+        return {"status": "error", "message": str(exc)"}

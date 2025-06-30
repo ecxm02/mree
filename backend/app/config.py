@@ -27,10 +27,22 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080"]
     ALLOWED_HOSTS: List[str] = ["localhost", "127.0.0.1"]
     
-    # File storage
-    MUSIC_STORAGE_PATH: str = "./music"
-    IMAGE_STORAGE_PATH: str = "./images"
-    MUSIC_DOWNLOAD_PATH: str = "./downloads"
+    # File storage paths - configurable for different drives
+    MUSIC_STORAGE_PATH: str = os.getenv("MUSIC_STORAGE_PATH", "/mnt/hdd/mree/music")
+    IMAGE_STORAGE_PATH: str = os.getenv("IMAGE_STORAGE_PATH", "/mnt/hdd/mree/images")
+    MUSIC_DOWNLOAD_PATH: str = os.getenv("MUSIC_DOWNLOAD_PATH", "/mnt/hdd/mree/downloads")
+    
+    # Database storage paths - configurable for SSD
+    POSTGRES_DATA_PATH: str = os.getenv("POSTGRES_DATA_PATH", "/mnt/ssd/mree/postgres")
+    ELASTICSEARCH_DATA_PATH: str = os.getenv("ELASTICSEARCH_DATA_PATH", "/mnt/ssd/mree/elasticsearch")
+    REDIS_DATA_PATH: str = os.getenv("REDIS_DATA_PATH", "/mnt/ssd/mree/redis")
+    
+    # Backup configuration
+    BACKUP_ENABLED: bool = os.getenv("BACKUP_ENABLED", "true").lower() == "true"
+    BACKUP_PATH: str = os.getenv("BACKUP_PATH", "/mnt/backup/mree")
+    BACKUP_SCHEDULE_HOUR: int = int(os.getenv("BACKUP_SCHEDULE_HOUR", "3"))  # 3 AM daily
+    BACKUP_RETENTION_DAYS: int = int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
+    BACKUP_COMPRESS: bool = os.getenv("BACKUP_COMPRESS", "true").lower() == "true"
     
     # Server
     DEBUG: bool = True

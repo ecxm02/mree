@@ -185,10 +185,11 @@ class ElasticsearchService:
             return []
     
     def get_file_path(self, spotify_id: str) -> str:
-        """Generate standardized file path for a song"""
+        """Generate standardized file path for a song using configurable storage path"""
         # Organize by first 2 characters of spotify_id for better file system distribution
         prefix = spotify_id[:2]
-        return f"/app/music/{prefix}/{spotify_id}.mp3"
+        from ..config import settings
+        return f"{settings.MUSIC_STORAGE_PATH}/{prefix}/{spotify_id}.mp3"
     
     # Synchronous methods for Celery tasks (Celery can't handle async)
     
