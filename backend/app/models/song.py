@@ -1,8 +1,16 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, UniqueConstraint
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, UniqueConstraint, Enum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+import enum
 
 from ..database import Base
+
+class DownloadStatus(enum.Enum):
+    """Enum for download status values"""
+    PENDING = "pending"
+    DOWNLOADING = "downloading" 
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 class UserLibrary(Base):
     """User's personal music library - references to songs they 'own' by Spotify ID"""

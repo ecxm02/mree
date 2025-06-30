@@ -15,8 +15,8 @@ services:
       - ELASTICSEARCH_DATA_PATH=${ELASTICSEARCH_DATA_PATH:-/mnt/ssd/mree/elasticsearch}
       - BACKUP_PATH=${BACKUP_PATH:-/mnt/backup/mree}
     volumes:
-      - ${MUSIC_STORAGE_PATH:-/mnt/hdd/mree/music}:/app/music
-      - ${BACKUP_PATH:-/mnt/backup/mree}:/app/backups
+      - ./music-data:/app/music
+      - ./backup-data:/app/backups
     depends_on:
       - music-db
       - music-redis
@@ -56,6 +56,7 @@ services:
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     volumes:
       - ${ELASTICSEARCH_DATA_PATH:-/mnt/ssd/mree/elasticsearch}:/usr/share/elasticsearch/data
+    user: "1000:1000"  # Fix permissions issue
     restart: unless-stopped
 
   # Background worker for downloads

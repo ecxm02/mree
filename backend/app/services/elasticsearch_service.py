@@ -28,7 +28,8 @@ class ElasticsearchService:
                         "duration": {"type": "integer"},
                         "file_path": {"type": "keyword"},
                         "file_size": {"type": "long"},
-                        "thumbnail_url": {"type": "keyword"},
+                        "thumbnail_path": {"type": "keyword"},
+                        "original_thumbnail_url": {"type": "keyword"},
                         "youtube_url": {"type": "keyword"},
                         "download_count": {"type": "integer"},
                         "download_status": {"type": "keyword"},  # pending, downloading, completed, failed
@@ -274,3 +275,12 @@ class ElasticsearchService:
         except Exception as e:
             logger.error(f"Error executing raw search: {e}")
             return {"hits": {"hits": []}}
+    
+    def get_total_songs(self) -> int:
+        """Get total number of songs in the catalog"""
+        try:
+            result = self.es.count(index=self.songs_index)
+            return result.get("count", 0)
+        except Exception as e:
+            logger.error(f"Error getting total song count: {e}")
+            return 0

@@ -11,9 +11,10 @@ import shutil
 import time
 
 from ..database import SessionLocal
-from ..models.song import DownloadQueue, DownloadStatus
+from ..models.song import DownloadStatus
 from ..services.elasticsearch_service import ElasticsearchService
 from ..services.spotify_service import SpotifyService
+from ..services.image_service import ImageService
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ class DownloadService:
         self.download_path.mkdir(parents=True, exist_ok=True)
         self.es_service = ElasticsearchService()
         self.spotify_service = SpotifyService()
+        self.image_service = ImageService()
     
     async def download_song(self, spotify_id: str) -> bool:
         """Download a song by Spotify ID to central storage with race condition protection"""
@@ -52,32 +54,20 @@ class DownloadService:
                 logger.info(f"Song {spotify_id} already exists, skipping download")
                 return True
             
-            # Update download queue status
-            queue_item = db.query(DownloadQueue).filter(
-                DownloadQueue.spotify_id == spotify_id
-            ).first()
-            
-            if queue_item:
-                queue_item.status = DownloadStatus.DOWNLOADING
-                db.commit()
+            # Update Elasticsearch with downloading status
+            await self.es_service.update_song_status(spotify_id, "downloading")
             
             # Get song metadata from Spotify
             track_details = await self.spotify_service.get_track(spotify_id)
             if not track_details:
-                if queue_item:
-                    queue_item.status = DownloadStatus.FAILED
-                    queue_item.error_message = "Failed to get Spotify metadata"
-                    db.commit()
+                await self.es_service.update_song_status(spotify_id, "failed")
                 return False
             
             # Search YouTube for the song
             search_query = f"{track_details['artists'][0]['name']} - {track_details['name']}"
             youtube_url = self._search_youtube(search_query)
             if not youtube_url:
-                if queue_item:
-                    queue_item.status = DownloadStatus.FAILED
-                    queue_item.error_message = "YouTube video not found"
-                    db.commit()
+                await self.es_service.update_song_status(spotify_id, "failed")
                 return False
             
             # Generate file path (organized by spotify_id prefix)
@@ -87,6 +77,13 @@ class DownloadService:
             
             # Download the audio
             if self._download_audio(youtube_url, file_path_obj):
+                # Download album artwork
+                original_image_url = track_details["album"]["images"][0]["url"] if track_details["album"]["images"] else None
+                local_image_path = None
+                
+                if original_image_url:
+                    local_image_path = self.image_service.download_album_art(spotify_id, original_image_url)
+                
                 # Add to Elasticsearch
                 song_data = {
                     "spotify_id": spotify_id,
@@ -96,7 +93,8 @@ class DownloadService:
                     "duration": track_details["duration_ms"] // 1000,
                     "file_path": str(file_path),
                     "file_size": file_path_obj.stat().st_size if file_path_obj.exists() else 0,
-                    "thumbnail_url": track_details["album"]["images"][0]["url"] if track_details["album"]["images"] else None,
+                    "thumbnail_path": local_image_path,
+                    "original_thumbnail_url": original_image_url,
                     "youtube_url": youtube_url,
                     "download_count": 1,
                     "created_at": datetime.utcnow().isoformat(),
@@ -106,32 +104,18 @@ class DownloadService:
                 success = await self.es_service.add_song(song_data)
                 
                 if success:
-                    # Update download queue
-                    if queue_item:
-                        queue_item.status = DownloadStatus.COMPLETED
-                        db.commit()
-                    
                     logger.info(f"Successfully downloaded and indexed: {track_details['name']}")
                     return True
                 else:
-                    if queue_item:
-                        queue_item.status = DownloadStatus.FAILED
-                        queue_item.error_message = "Failed to index in Elasticsearch"
-                        db.commit()
+                    await self.es_service.update_song_status(spotify_id, "failed")
                     return False
             else:
-                if queue_item:
-                    queue_item.status = DownloadStatus.FAILED
-                    queue_item.error_message = "Download failed"
-                    db.commit()
+                await self.es_service.update_song_status(spotify_id, "failed")
                 return False
             
         except Exception as e:
             logger.error(f"Download error for song {spotify_id}: {e}")
-            if queue_item:
-                queue_item.status = DownloadStatus.FAILED
-                queue_item.error_message = str(e)
-                db.commit()
+            await self.es_service.update_song_status(spotify_id, "failed")
             return False
         finally:
             db.close()
@@ -158,19 +142,15 @@ class DownloadService:
         
         return None
     
-    def _download_audio(self, youtube_url: str, song: Song) -> Optional[Path]:
-        """Download audio from YouTube URL"""
+    def _download_audio(self, youtube_url: str, file_path: Path) -> bool:
+        """Download audio from YouTube URL to specified path"""
         try:
-            # Create safe filename
-            safe_filename = self._make_safe_filename(f"{song.artist} - {song.title}")
-            output_path = self.download_path / f"{safe_filename}.%(ext)s"
-            
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'extractaudio': True,
                 'audioformat': 'mp3',
                 'audioquality': '192',
-                'outtmpl': str(output_path),
+                'outtmpl': str(file_path.with_suffix('.%(ext)s')),
                 'quiet': True,
                 'no_warnings': True,
                 'postprocessors': [{
@@ -183,16 +163,26 @@ class DownloadService:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([youtube_url])
                 
-                # Find the downloaded file
-                mp3_file = self.download_path / f"{safe_filename}.mp3"
-                if mp3_file.exists():
-                    return mp3_file
+                # Check if file was created successfully
+                mp3_file = file_path.with_suffix('.mp3')
+                if mp3_file.exists() and mp3_file.stat().st_size > 0:
+                    # If final path is different, move it
+                    if mp3_file != file_path:
+                        shutil.move(str(mp3_file), str(file_path))
+                    return True
                 
                 # Sometimes the file extension might be different
-                for ext in ['.mp3', '.m4a', '.webm', '.opus']:
-                    potential_file = self.download_path / f"{safe_filename}{ext}"
-                    if potential_file.exists():
-                        return potential_file
+                for ext in ['.m4a', '.webm', '.opus']:
+                    potential_file = file_path.with_suffix(ext)
+                    if potential_file.exists() and potential_file.stat().st_size > 0:
+                        shutil.move(str(potential_file), str(file_path))
+                        return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Download error: {e}")
+            return False
             
         except Exception as e:
             logger.error(f"Download error: {e}")
@@ -214,21 +204,49 @@ class DownloadService:
         
         return filename.strip()
     
-    def get_download_progress(self, song_id: int) -> dict:
-        """Get download progress for a song"""
-        db = SessionLocal()
+    async def get_download_progress(self, spotify_id: str) -> dict:
+        """Get download progress for a song by Spotify ID"""
         try:
-            song = db.query(Song).filter(Song.id == song_id).first()
+            song = await self.es_service.get_song(spotify_id)
             if not song:
                 return {"error": "Song not found"}
             
             return {
-                "song_id": song.id,
-                "title": song.title,
-                "artist": song.artist,
-                "status": song.download_status.value,
-                "file_path": song.file_path,
-                "youtube_url": song.youtube_url
+                "spotify_id": spotify_id,
+                "title": song.get("title", "Unknown"),
+                "artist": song.get("artist", "Unknown"),
+                "status": song.get("download_status", "unknown"),
+                "file_path": song.get("file_path"),
+                "youtube_url": song.get("youtube_url")
             }
-        finally:
-            db.close()
+        except Exception as e:
+            logger.error(f"Error getting download progress: {e}")
+            return {"error": str(e)}
+    
+    def download_song_sync(self, spotify_id: str) -> dict:
+        """Synchronous version of download_song for use in Celery tasks"""
+        try:
+            # Use an event loop to run the async method
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                result = loop.run_until_complete(self.download_song(spotify_id))
+                if result:
+                    return {
+                        "success": True,
+                        "file_path": self.es_service.get_file_path(spotify_id),
+                        "spotify_id": spotify_id
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": "Download failed"
+                    }
+            finally:
+                loop.close()
+        except Exception as e:
+            logger.error(f"Sync download error for {spotify_id}: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
