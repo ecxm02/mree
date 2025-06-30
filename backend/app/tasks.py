@@ -246,7 +246,7 @@ def daily_backup():
             
     except Exception as exc:
         logger.error(f"Daily backup task failed: {str(exc)}")
-        return {"status": "error", "message": str(exc)"}
+        return {"status": "error", "message": str(exc)}
 
 @current_app.task
 def manual_backup():
@@ -267,4 +267,4 @@ def manual_backup():
         
     except Exception as exc:
         logger.error(f"Manual backup task failed: {str(exc)}")
-        return {"status": "error", "message": str(exc)"}
+        return {"status": "error", "message": str(exc)}

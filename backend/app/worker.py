@@ -1,4 +1,5 @@
 from celery import Celery
+from celery.schedules import crontab
 import os
 from .config import settings
 
@@ -25,6 +26,17 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
     task_acks_late=True,
     task_reject_on_worker_lost=True,
+    # Celery Beat schedule for periodic tasks
+    beat_schedule={
+        'daily-backup': {
+            'task': 'app.tasks.daily_backup',
+            'schedule': crontab(hour=settings.BACKUP_SCHEDULE_HOUR, minute=0),
+        },
+        'cleanup-failed-downloads': {
+            'task': 'app.tasks.cleanup_failed_downloads',
+            'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        },
+    },
 )
 
 # Optional: Configure result expiration

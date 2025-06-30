@@ -10,9 +10,13 @@ services:
       - ELASTICSEARCH_URL=http://music-search:9200
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - MUSIC_STORAGE_PATH=${MUSIC_STORAGE_PATH:-/mnt/hdd/mree/music}
+      - POSTGRES_DATA_PATH=${POSTGRES_DATA_PATH:-/mnt/ssd/mree/postgres}
+      - ELASTICSEARCH_DATA_PATH=${ELASTICSEARCH_DATA_PATH:-/mnt/ssd/mree/elasticsearch}
+      - BACKUP_PATH=${BACKUP_PATH:-/mnt/backup/mree}
     volumes:
-      - ./music:/app/music
-      - ./images:/app/images
+      - ${MUSIC_STORAGE_PATH:-/mnt/hdd/mree/music}:/app/music
+      - ${BACKUP_PATH:-/mnt/backup/mree}:/app/backups
     depends_on:
       - music-db
       - music-redis
@@ -29,8 +33,7 @@ services:
       - POSTGRES_USER=musicuser
       - POSTGRES_PASSWORD=musicpass
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./backups:/backups
+      - ${POSTGRES_DATA_PATH:-/mnt/ssd/mree/postgres}:/var/lib/postgresql/data
     restart: unless-stopped
 
   # Redis cache and queue
@@ -39,7 +42,7 @@ services:
     ports:
       - "6380:6379"  # External 6380 to avoid Immich conflict
     volumes:
-      - redis_data:/data
+      - ${REDIS_DATA_PATH:-/mnt/ssd/mree/redis}:/data
     restart: unless-stopped
 
   # Elasticsearch for search
@@ -52,7 +55,7 @@ services:
       - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
+      - ${ELASTICSEARCH_DATA_PATH:-/mnt/ssd/mree/elasticsearch}:/usr/share/elasticsearch/data
     restart: unless-stopped
 
   # Background worker for downloads
@@ -65,16 +68,32 @@ services:
       - ELASTICSEARCH_URL=http://music-search:9200
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - MUSIC_STORAGE_PATH=${MUSIC_STORAGE_PATH:-/mnt/hdd/mree/music}
+      - BACKUP_PATH=${BACKUP_PATH:-/mnt/backup/mree}
     volumes:
-      - ./music:/app/music
-      - ./images:/app/images
+      - ${MUSIC_STORAGE_PATH:-/mnt/hdd/mree/music}:/app/music
+      - ${BACKUP_PATH:-/mnt/backup/mree}:/app/backups
     depends_on:
       - music-db
       - music-redis
       - music-search
     restart: unless-stopped
 
-volumes:
-  postgres_data:
-  redis_data:
-  elasticsearch_data:
+  # Celery Beat for scheduled tasks (backups)
+  music-scheduler:
+    build: .
+    command: celery -A app.worker beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://musicuser:musicpass@music-db:5432/musicdb
+      - REDIS_URL=redis://music-redis:6379/0
+      - ELASTICSEARCH_URL=http://music-search:9200
+      - BACKUP_ENABLED=${BACKUP_ENABLED:-true}
+      - BACKUP_PATH=${BACKUP_PATH:-/mnt/backup/mree}
+      - BACKUP_SCHEDULE_HOUR=${BACKUP_SCHEDULE_HOUR:-3}
+    volumes:
+      - ${BACKUP_PATH:-/mnt/backup/mree}:/app/backups
+    depends_on:
+      - music-db
+      - music-redis
+      - music-search
+    restart: unless-stopped
