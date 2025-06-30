@@ -40,6 +40,16 @@ class SpotifyService:
             logger.error(f"Spotify track fetch error: {e}")
             raise
     
+    def get_track_sync(self, track_id: str) -> Dict[str, Any]:
+        """Synchronous version of get_track for Celery tasks"""
+        try:
+            logger.info(f"Getting Spotify track (sync): {track_id}")
+            track = self.sp.track(track_id)
+            return track
+        except Exception as e:
+            logger.error(f"Spotify track fetch error (sync): {e}")
+            raise
+    
     async def get_artist(self, artist_id: str) -> Dict[str, Any]:
         """Get artist information by Spotify ID"""
         try:
