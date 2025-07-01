@@ -75,6 +75,12 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6380/1"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6380/2"
     
+    # Celery worker settings (future-proofing for Celery 6.0+)
+    CELERY_WORKER_PREFETCH_MULTIPLIER: int = int(os.getenv("CELERY_WORKER_PREFETCH_MULTIPLIER", "1"))
+    CELERY_BROKER_CONNECTION_RETRY: bool = os.getenv("CELERY_BROKER_CONNECTION_RETRY", "true").lower() == "true"
+    CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: bool = os.getenv("CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP", "true").lower() == "true"
+    CELERY_BROKER_CONNECTION_MAX_RETRIES: int = int(os.getenv("CELERY_BROKER_CONNECTION_MAX_RETRIES", "10"))
+    
     # Download settings
     MAX_DOWNLOAD_SIZE_MB: int = 50
     DOWNLOAD_TIMEOUT_SECONDS: int = 300

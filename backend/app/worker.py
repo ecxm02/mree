@@ -23,9 +23,17 @@ celery_app.conf.update(
         'app.tasks.download_song': {'queue': 'downloads'},
         'app.tasks.process_audio': {'queue': 'processing'},
     },
-    worker_prefetch_multiplier=1,
+    worker_prefetch_multiplier=settings.CELERY_WORKER_PREFETCH_MULTIPLIER,
     task_acks_late=True,
     task_reject_on_worker_lost=True,
+    # Connection retry settings for Celery 6.0+ compatibility
+    broker_connection_retry_on_startup=settings.CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP,
+    broker_connection_retry=settings.CELERY_BROKER_CONNECTION_RETRY,
+    broker_connection_max_retries=settings.CELERY_BROKER_CONNECTION_MAX_RETRIES,
+    # Worker settings for better reliability
+    worker_disable_rate_limits=True,
+    worker_send_task_events=True,
+    task_send_sent_event=True,
     # Celery Beat schedule for periodic tasks
     beat_schedule={
         'daily-backup': {
