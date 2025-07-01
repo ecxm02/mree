@@ -1,8 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
 from typing import List
-import secrets
-import os
 
 
 class Settings(BaseSettings):
@@ -12,20 +10,20 @@ class Settings(BaseSettings):
         case_sensitive=True
     )
     # Database
-    DATABASE_URL: str = "postgresql://musicuser:musicpass@localhost:5433/musicdb"
+    DATABASE_URL: str
     
     # Redis
-    REDIS_URL: str = "redis://localhost:6380/0"
+    REDIS_URL: str
     
     # Elasticsearch
-    ELASTICSEARCH_URL: str = "http://localhost:9201"
+    ELASTICSEARCH_URL: str
     
     # Spotify API
-    SPOTIFY_CLIENT_ID: str = ""
-    SPOTIFY_CLIENT_SECRET: str = ""
+    SPOTIFY_CLIENT_ID: str
+    SPOTIFY_CLIENT_SECRET: str
     
-    # JWT - Generate secure key if not provided
-    SECRET_KEY: str = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))
+    # JWT
+    SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
@@ -33,34 +31,34 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080"]
     ALLOWED_HOSTS: List[str] = ["localhost", "127.0.0.1"]
     
-    # File storage paths - configurable for different drives
-    MUSIC_STORAGE_PATH: str = os.getenv("MUSIC_STORAGE_PATH", "/mnt/hdd/mree/music")
-    IMAGE_STORAGE_PATH: str = os.getenv("IMAGE_STORAGE_PATH", "/mnt/hdd/mree/images")
-    MUSIC_DOWNLOAD_PATH: str = os.getenv("MUSIC_DOWNLOAD_PATH", "/mnt/hdd/mree/downloads")
+    # File storage paths
+    MUSIC_STORAGE_PATH: str
+    IMAGE_STORAGE_PATH: str
+    MUSIC_DOWNLOAD_PATH: str
     
-    # Database storage paths - configurable for SSD
-    POSTGRES_DATA_PATH: str = os.getenv("POSTGRES_DATA_PATH", "/mnt/ssd/mree/postgres")
-    ELASTICSEARCH_DATA_PATH: str = os.getenv("ELASTICSEARCH_DATA_PATH", "/mnt/ssd/mree/elasticsearch")
-    REDIS_DATA_PATH: str = os.getenv("REDIS_DATA_PATH", "/mnt/ssd/mree/redis")
+    # Database storage paths
+    POSTGRES_DATA_PATH: str
+    ELASTICSEARCH_DATA_PATH: str
+    REDIS_DATA_PATH: str
     
     # Backup configuration
-    BACKUP_ENABLED: bool = os.getenv("BACKUP_ENABLED", "true").lower() == "true"
-    BACKUP_PATH: str = os.getenv("BACKUP_PATH", "/mnt/backup/mree")
-    BACKUP_SCHEDULE_HOUR: int = int(os.getenv("BACKUP_SCHEDULE_HOUR", "3"))  # 3 AM daily
-    BACKUP_RETENTION_DAYS: int = int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
-    BACKUP_COMPRESS: bool = os.getenv("BACKUP_COMPRESS", "true").lower() == "true"
+    BACKUP_ENABLED: bool
+    BACKUP_PATH: str
+    BACKUP_SCHEDULE_HOUR: int
+    BACKUP_RETENTION_DAYS: int
+    BACKUP_COMPRESS: bool
     
     # Cleanup configuration
-    IMAGE_CLEANUP_ENABLED: bool = os.getenv("IMAGE_CLEANUP_ENABLED", "true").lower() == "true"
+    IMAGE_CLEANUP_ENABLED: bool
     
     # Metrics configuration
-    METRICS_ENABLED: bool = os.getenv("METRICS_ENABLED", "true").lower() == "true"
-    METRICS_UPDATE_INTERVAL: int = int(os.getenv("METRICS_UPDATE_INTERVAL", "60"))
+    METRICS_ENABLED: bool
+    METRICS_UPDATE_INTERVAL: int
     
     # Server
-    DEBUG: bool = True
-    HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    DEBUG: bool
+    HOST: str
+    PORT: int
     WORKERS: int = 1
     
     # Rate limiting (requests per time window)
@@ -81,11 +79,11 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6380/1"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6380/2"
     
-    # Celery worker settings (future-proofing for Celery 6.0+)
-    CELERY_WORKER_PREFETCH_MULTIPLIER: int = int(os.getenv("CELERY_WORKER_PREFETCH_MULTIPLIER", "1"))
-    CELERY_BROKER_CONNECTION_RETRY: bool = os.getenv("CELERY_BROKER_CONNECTION_RETRY", "true").lower() == "true"
-    CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: bool = os.getenv("CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP", "true").lower() == "true"
-    CELERY_BROKER_CONNECTION_MAX_RETRIES: int = int(os.getenv("CELERY_BROKER_CONNECTION_MAX_RETRIES", "10"))
+    # Celery worker settings
+    CELERY_WORKER_PREFETCH_MULTIPLIER: int
+    CELERY_BROKER_CONNECTION_RETRY: bool
+    CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP: bool
+    CELERY_BROKER_CONNECTION_MAX_RETRIES: int
     
     # Download settings
     MAX_DOWNLOAD_SIZE_MB: int = 50

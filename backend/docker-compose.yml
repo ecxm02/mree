@@ -3,38 +3,38 @@ services:
   music-api:
     build: .
     ports:
-      - "${PORT:-8000}:8000"
+      - "${PORT}:8000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-musicuser}:${POSTGRES_PASSWORD:-musicpass}@music-db:5432/${POSTGRES_DB:-musicdb}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@music-db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://music-redis:6379/0
       - ELASTICSEARCH_URL=http://music-search:9200
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - SECRET_KEY=${SECRET_KEY}
-      - DEBUG=${DEBUG:-false}
-      - HOST=${HOST:-0.0.0.0}
-      - PORT=${PORT:-8000}
-      - MUSIC_STORAGE_PATH=${MUSIC_STORAGE_PATH:-/mnt/hdd/mree/music}
-      - IMAGE_STORAGE_PATH=${IMAGE_STORAGE_PATH:-/mnt/ssd/mree/images}
-      - MUSIC_DOWNLOAD_PATH=${MUSIC_DOWNLOAD_PATH:-/mnt/hdd/mree/downloads}
-      - POSTGRES_DATA_PATH=${POSTGRES_DATA_PATH:-/mnt/ssd/mree/postgres}
-      - ELASTICSEARCH_DATA_PATH=${ELASTICSEARCH_DATA_PATH:-/mnt/ssd/mree/elasticsearch}
-      - BACKUP_PATH=${BACKUP_PATH:-/mnt/backup/mree}
-      - BACKUP_ENABLED=${BACKUP_ENABLED:-true}
-      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
-      - BACKUP_COMPRESS=${BACKUP_COMPRESS:-true}
-      - IMAGE_CLEANUP_ENABLED=${IMAGE_CLEANUP_ENABLED:-true}
-      - METRICS_ENABLED=${METRICS_ENABLED:-true}
-      - METRICS_UPDATE_INTERVAL=${METRICS_UPDATE_INTERVAL:-60}
-      - CELERY_WORKER_PREFETCH_MULTIPLIER=${CELERY_WORKER_PREFETCH_MULTIPLIER:-1}
-      - CELERY_BROKER_CONNECTION_RETRY=${CELERY_BROKER_CONNECTION_RETRY:-true}
-      - CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP=${CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP:-true}
-      - CELERY_BROKER_CONNECTION_MAX_RETRIES=${CELERY_BROKER_CONNECTION_MAX_RETRIES:-10}
+      - DEBUG=${DEBUG}
+      - HOST=${HOST}
+      - PORT=${PORT}
+      - MUSIC_STORAGE_PATH=/app/music
+      - IMAGE_STORAGE_PATH=/app/images
+      - MUSIC_DOWNLOAD_PATH=/app/downloads
+      - POSTGRES_DATA_PATH=/app/postgres
+      - ELASTICSEARCH_DATA_PATH=/app/elasticsearch  
+      - BACKUP_PATH=/app/backups
+      - BACKUP_ENABLED=${BACKUP_ENABLED}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS}
+      - BACKUP_COMPRESS=${BACKUP_COMPRESS}
+      - IMAGE_CLEANUP_ENABLED=${IMAGE_CLEANUP_ENABLED}
+      - METRICS_ENABLED=${METRICS_ENABLED}
+      - METRICS_UPDATE_INTERVAL=${METRICS_UPDATE_INTERVAL}
+      - CELERY_WORKER_PREFETCH_MULTIPLIER=${CELERY_WORKER_PREFETCH_MULTIPLIER}
+      - CELERY_BROKER_CONNECTION_RETRY=${CELERY_BROKER_CONNECTION_RETRY}
+      - CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP=${CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP}
+      - CELERY_BROKER_CONNECTION_MAX_RETRIES=${CELERY_BROKER_CONNECTION_MAX_RETRIES}
     volumes:
-      - ${MUSIC_STORAGE_PATH:-/mnt/hdd/mree/music}:/app/music
-      - ${IMAGE_STORAGE_PATH:-/mnt/ssd/mree/images}:/app/images
-      - ${MUSIC_DOWNLOAD_PATH:-/mnt/hdd/mree/downloads}:/app/downloads
-      - ${BACKUP_PATH:-/mnt/backup/mree}:/app/backups
+      - ${MUSIC_STORAGE_PATH}:/app/music
+      - ${IMAGE_STORAGE_PATH}:/app/images
+      - ${MUSIC_DOWNLOAD_PATH}:/app/downloads
+      - ${BACKUP_PATH}:/app/backups
     depends_on:
       - music-db
       - music-redis
@@ -47,11 +47,11 @@ services:
     ports:
       - "5433:5432"  # External 5433 to avoid Immich conflict
     environment:
-      - POSTGRES_DB=${POSTGRES_DB:-musicdb}
-      - POSTGRES_USER=${POSTGRES_USER:-musicuser}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-musicpass}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
-      - ${POSTGRES_DATA_PATH:-/mnt/ssd/mree/postgres}:/var/lib/postgresql/data
+      - ${POSTGRES_DATA_PATH}:/var/lib/postgresql/data
     restart: unless-stopped
 
   # Redis cache and queue
@@ -60,7 +60,7 @@ services:
     ports:
       - "6380:6379"  # External 6380 to avoid Immich conflict
     volumes:
-      - ${REDIS_DATA_PATH:-/mnt/ssd/mree/redis}:/data
+      - ${REDIS_DATA_PATH}:/data
     restart: unless-stopped
 
   # Elasticsearch for search
@@ -71,10 +71,10 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms${ELASTICSEARCH_MEMORY:-512m} -Xmx${ELASTICSEARCH_MEMORY:-512m}"
+      - "ES_JAVA_OPTS=-Xms${ELASTICSEARCH_MEMORY} -Xmx${ELASTICSEARCH_MEMORY}"
     volumes:
-      - ${ELASTICSEARCH_DATA_PATH:-/mnt/ssd/mree/elasticsearch}:/usr/share/elasticsearch/data
-    user: "${ELASTICSEARCH_USER_ID:-1000}:${ELASTICSEARCH_GROUP_ID:-1000}"  # Fix permissions issue
+      - ${ELASTICSEARCH_DATA_PATH}:/usr/share/elasticsearch/data
+    user: "${ELASTICSEARCH_USER_ID}:${ELASTICSEARCH_GROUP_ID}"  # Fix permissions issue
     restart: unless-stopped
 
   # Background worker for downloads
@@ -82,29 +82,29 @@ services:
     build: .
     command: celery -A app.worker.celery_app worker --loglevel=info
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-musicuser}:${POSTGRES_PASSWORD:-musicpass}@music-db:5432/${POSTGRES_DB:-musicdb}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@music-db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://music-redis:6379/0
       - ELASTICSEARCH_URL=http://music-search:9200
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - SECRET_KEY=${SECRET_KEY}
-      - MUSIC_STORAGE_PATH=${MUSIC_STORAGE_PATH:-/mnt/hdd/mree/music}
-      - IMAGE_STORAGE_PATH=${IMAGE_STORAGE_PATH:-/mnt/ssd/mree/images}
-      - MUSIC_DOWNLOAD_PATH=${MUSIC_DOWNLOAD_PATH:-/mnt/hdd/mree/downloads}
-      - BACKUP_PATH=${BACKUP_PATH:-/mnt/backup/mree}
-      - BACKUP_ENABLED=${BACKUP_ENABLED:-true}
-      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
-      - BACKUP_COMPRESS=${BACKUP_COMPRESS:-true}
-      - IMAGE_CLEANUP_ENABLED=${IMAGE_CLEANUP_ENABLED:-true}
-      - CELERY_WORKER_PREFETCH_MULTIPLIER=${CELERY_WORKER_PREFETCH_MULTIPLIER:-1}
-      - CELERY_BROKER_CONNECTION_RETRY=${CELERY_BROKER_CONNECTION_RETRY:-true}
-      - CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP=${CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP:-true}
-      - CELERY_BROKER_CONNECTION_MAX_RETRIES=${CELERY_BROKER_CONNECTION_MAX_RETRIES:-10}
+      - MUSIC_STORAGE_PATH=/app/music
+      - IMAGE_STORAGE_PATH=/app/images
+      - MUSIC_DOWNLOAD_PATH=/app/downloads
+      - BACKUP_PATH=/app/backups
+      - BACKUP_ENABLED=${BACKUP_ENABLED}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS}
+      - BACKUP_COMPRESS=${BACKUP_COMPRESS}
+      - IMAGE_CLEANUP_ENABLED=${IMAGE_CLEANUP_ENABLED}
+      - CELERY_WORKER_PREFETCH_MULTIPLIER=${CELERY_WORKER_PREFETCH_MULTIPLIER}
+      - CELERY_BROKER_CONNECTION_RETRY=${CELERY_BROKER_CONNECTION_RETRY}
+      - CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP=${CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP}
+      - CELERY_BROKER_CONNECTION_MAX_RETRIES=${CELERY_BROKER_CONNECTION_MAX_RETRIES}
     volumes:
-      - ${MUSIC_STORAGE_PATH:-/mnt/hdd/mree/music}:/app/music
-      - ${IMAGE_STORAGE_PATH:-/mnt/ssd/mree/images}:/app/images
-      - ${MUSIC_DOWNLOAD_PATH:-/mnt/hdd/mree/downloads}:/app/downloads
-      - ${BACKUP_PATH:-/mnt/backup/mree}:/app/backups
+      - ${MUSIC_STORAGE_PATH}:/app/music
+      - ${IMAGE_STORAGE_PATH}:/app/images
+      - ${MUSIC_DOWNLOAD_PATH}:/app/downloads
+      - ${BACKUP_PATH}:/app/backups
     depends_on:
       - music-db
       - music-redis
@@ -116,24 +116,24 @@ services:
     build: .
     command: celery -A app.worker.celery_app beat --loglevel=info
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-musicuser}:${POSTGRES_PASSWORD:-musicpass}@music-db:5432/${POSTGRES_DB:-musicdb}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@music-db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://music-redis:6379/0
       - ELASTICSEARCH_URL=http://music-search:9200
       - SECRET_KEY=${SECRET_KEY}
-      - BACKUP_ENABLED=${BACKUP_ENABLED:-true}
-      - BACKUP_PATH=${BACKUP_PATH:-/mnt/backup/mree}
-      - BACKUP_SCHEDULE_HOUR=${BACKUP_SCHEDULE_HOUR:-3}
-      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
-      - BACKUP_COMPRESS=${BACKUP_COMPRESS:-true}
-      - IMAGE_CLEANUP_ENABLED=${IMAGE_CLEANUP_ENABLED:-true}
-      - IMAGE_STORAGE_PATH=${IMAGE_STORAGE_PATH:-/mnt/ssd/mree/images}
-      - CELERY_WORKER_PREFETCH_MULTIPLIER=${CELERY_WORKER_PREFETCH_MULTIPLIER:-1}
-      - CELERY_BROKER_CONNECTION_RETRY=${CELERY_BROKER_CONNECTION_RETRY:-true}
-      - CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP=${CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP:-true}
-      - CELERY_BROKER_CONNECTION_MAX_RETRIES=${CELERY_BROKER_CONNECTION_MAX_RETRIES:-10}
+      - BACKUP_ENABLED=${BACKUP_ENABLED}
+      - BACKUP_PATH=/app/backups
+      - BACKUP_SCHEDULE_HOUR=${BACKUP_SCHEDULE_HOUR}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS}
+      - BACKUP_COMPRESS=${BACKUP_COMPRESS}
+      - IMAGE_CLEANUP_ENABLED=${IMAGE_CLEANUP_ENABLED}
+      - IMAGE_STORAGE_PATH=/app/images
+      - CELERY_WORKER_PREFETCH_MULTIPLIER=${CELERY_WORKER_PREFETCH_MULTIPLIER}
+      - CELERY_BROKER_CONNECTION_RETRY=${CELERY_BROKER_CONNECTION_RETRY}
+      - CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP=${CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP}
+      - CELERY_BROKER_CONNECTION_MAX_RETRIES=${CELERY_BROKER_CONNECTION_MAX_RETRIES}
     volumes:
-      - ${BACKUP_PATH:-/mnt/backup/mree}:/app/backups
-      - ${IMAGE_STORAGE_PATH:-/mnt/ssd/mree/images}:/app/images
+      - ${BACKUP_PATH}:/app/backups
+      - ${IMAGE_STORAGE_PATH}:/app/images
     depends_on:
       - music-db
       - music-redis
