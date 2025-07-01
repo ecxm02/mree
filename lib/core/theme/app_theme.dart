@@ -11,7 +11,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      fontFamily: GoogleFonts.inter().fontFamily,
+      fontFamily: GoogleFonts.dmSans().fontFamily,
       colorScheme: const ColorScheme.dark(
         primary: primaryColor,
         surface: backgroundColor,
@@ -21,7 +21,7 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: backgroundColor,
         elevation: 0,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.dmSans(
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -33,7 +33,7 @@ class AppTheme {
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
       ),
-      textTheme: GoogleFonts.interTextTheme(),
+      textTheme: GoogleFonts.dmSansTextTheme(),
     );
   }
 }

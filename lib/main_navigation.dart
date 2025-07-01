@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../features/home/home_screen.dart';
 import '../features/search/search_screen.dart';
 import '../features/library/library_screen.dart';
+import '../features/settings/settings_screen.dart';
+import '../features/auth/auth_provider.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -22,6 +25,18 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar:
+          _currentIndex == 0
+              ? AppBar(
+                title: const Text('MREE'),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.person),
+                    onPressed: () => _showProfileMenu(context),
+                  ),
+                ],
+              )
+              : null,
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
@@ -39,6 +54,47 @@ class _MainNavigationState extends State<MainNavigation> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showProfileMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder:
+          (context) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.person),
+                title: const Text('Profile'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // TODO: Navigate to profile screen
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.settings),
+                title: const Text('Settings'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Logout'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await context.read<AuthProvider>().logout();
+                },
+              ),
+            ],
+          ),
     );
   }
 }
