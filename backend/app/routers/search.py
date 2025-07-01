@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from ..database import get_db
 from ..models.user import User
@@ -9,9 +9,19 @@ from ..schemas.songs import SongSearch, SearchResponse, SpotifySearchResult, Son
 from ..routers.auth import get_current_user
 from ..services.spotify_service import SpotifyService
 from ..services.elasticsearch_service import ElasticsearchService
+from ..services.image_service import ImageService
 from ..tasks import download_song
 
 router = APIRouter(prefix="/search", tags=["search"])
+
+def get_thumbnail_url(song_doc: dict) -> Optional[str]:
+    """Get the appropriate thumbnail URL for a song with failsafe re-download"""
+    spotify_id = song_doc.get("spotify_id")
+    original_url = song_doc.get("original_thumbnail_url")
+    if spotify_id:
+        image_service = ImageService()
+        return image_service.get_image_url_with_fallback(spotify_id, original_url)
+    return original_url
 
 @router.post("/spotify", response_model=SearchResponse)
 async def search_spotify(
@@ -157,7 +167,7 @@ async def get_user_library(
                 spotify_id=song_doc.get("spotify_id"),
                 youtube_url=song_doc.get("youtube_url"),
                 file_path=song_doc.get("file_path"),
-                thumbnail_url=song_doc.get("thumbnail_url"),
+                thumbnail_url=get_thumbnail_url(song_doc),
                 download_status="completed",
                 created_at=library_entry.added_at
             ))
@@ -198,7 +208,7 @@ async def get_popular_songs(
             spotify_id=song_doc.get("spotify_id"),
             youtube_url=song_doc.get("youtube_url"),
             file_path=song_doc.get("file_path"),
-            thumbnail_url=song_doc.get("thumbnail_url"),
+            thumbnail_url=get_thumbnail_url(song_doc),
             download_status="completed",
             created_at=song_doc.get("created_at")
         ))
@@ -249,7 +259,7 @@ async def search_local_songs(
             spotify_id=song_doc.get("spotify_id"),
             youtube_url=song_doc.get("youtube_url"),
             file_path=song_doc.get("file_path"),
-            thumbnail_url=song_doc.get("thumbnail_url"),
+            thumbnail_url=get_thumbnail_url(song_doc),
             download_status="completed",
             created_at=song_doc.get("created_at")
         ))
@@ -300,7 +310,7 @@ async def search_by_artist(
             spotify_id=song_doc.get("spotify_id"),
             youtube_url=song_doc.get("youtube_url"),
             file_path=song_doc.get("file_path"),
-            thumbnail_url=song_doc.get("thumbnail_url"),
+            thumbnail_url=get_thumbnail_url(song_doc),
             download_status="completed",
             created_at=song_doc.get("created_at")
         ))

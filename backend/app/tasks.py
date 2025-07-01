@@ -5,6 +5,7 @@ from .models.song import UserLibrary
 from .services.download_service import DownloadService
 from .services.elasticsearch_service import ElasticsearchService
 from .services.backup_service import backup_service
+from .services.image_service import ImageService
 from datetime import datetime
 import logging
 
@@ -62,13 +63,22 @@ def download_song(self, spotify_id: str, user_id: int):
             spotify_service = SpotifyService()
             track_info = spotify_service.get_track_sync(spotify_id)
             
+            # Download album artwork
+            image_service = ImageService()
+            original_image_url = track_info["album"]["images"][0]["url"] if track_info["album"]["images"] else None
+            local_image_path = None
+            
+            if original_image_url:
+                local_image_path = image_service.download_album_art(spotify_id, original_image_url)
+            
             song_doc = {
                 "spotify_id": spotify_id,
                 "title": track_info["name"],
                 "artist": ", ".join([artist["name"] for artist in track_info["artists"]]),
                 "album": track_info["album"]["name"],
                 "duration": track_info["duration_ms"] // 1000,
-                "thumbnail_url": track_info["album"]["images"][0]["url"] if track_info["album"]["images"] else None,
+                "thumbnail_path": local_image_path,
+                "original_thumbnail_url": original_image_url,
                 "download_status": "downloading",
                 "download_count": 1,
                 "first_requested_by": user_id,
@@ -267,4 +277,55 @@ def manual_backup():
         
     except Exception as exc:
         logger.error(f"Manual backup task failed: {str(exc)}")
+        return {"status": "error", "message": str(exc)}
+
+@current_app.task
+def cleanup_unused_images():
+    """
+    Periodic task to clean up unused album artwork files.
+    """
+    from .config import settings
+    
+    if not settings.IMAGE_CLEANUP_ENABLED:
+        logger.info("Image cleanup is disabled in configuration")
+        return {"status": "disabled", "message": "Image cleanup is disabled"}
+    
+    try:
+        logger.info("Starting image cleanup task...")
+        
+        # Get all active spotify IDs from Elasticsearch
+        es_service = ElasticsearchService()
+        query = {
+            "query": {"match_all": {}},
+            "_source": ["spotify_id"],
+            "size": 10000
+        }
+        
+        result = es_service.search_raw_sync(query)
+        active_spotify_ids = [hit["_source"]["spotify_id"] for hit in result.get("hits", {}).get("hits", [])]
+        
+        # Clean up unused images
+        image_service = ImageService()
+        cleanup_result = image_service.cleanup_unused_images(active_spotify_ids)
+        
+        if cleanup_result["status"] == "success":
+            logger.info(f"Image cleanup completed: deleted {cleanup_result['deleted_count']} files, freed {cleanup_result['freed_space_mb']} MB")
+        
+        return cleanup_result
+        
+    except Exception as exc:
+        logger.error(f"Image cleanup task failed: {str(exc)}")
+        return {"status": "error", "message": str(exc)}
+
+
+@current_app.task
+def update_metrics():
+    """Update Prometheus metrics periodically"""
+    try:
+        from .middleware.metrics import update_background_metrics
+        update_background_metrics()
+        logger.info("Metrics updated successfully")
+        return {"status": "success", "timestamp": datetime.utcnow().isoformat()}
+    except Exception as exc:
+        logger.error(f"Metrics update task failed: {str(exc)}")
         return {"status": "error", "message": str(exc)}

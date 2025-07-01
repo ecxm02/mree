@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     BACKUP_RETENTION_DAYS: int = int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
     BACKUP_COMPRESS: bool = os.getenv("BACKUP_COMPRESS", "true").lower() == "true"
     
+    # Cleanup configuration
+    IMAGE_CLEANUP_ENABLED: bool = os.getenv("IMAGE_CLEANUP_ENABLED", "true").lower() == "true"
+    
+    # Metrics configuration
+    METRICS_ENABLED: bool = os.getenv("METRICS_ENABLED", "true").lower() == "true"
+    METRICS_UPDATE_INTERVAL: int = int(os.getenv("METRICS_UPDATE_INTERVAL", "60"))
+    
     # Server
     DEBUG: bool = True
     HOST: str = "0.0.0.0"
