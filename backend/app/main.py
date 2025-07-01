@@ -25,21 +25,6 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("🚀 Starting Music Streaming API...")
     
-    # Create required directories if they don't exist
-    directories_to_create = [
-        settings.MUSIC_STORAGE_PATH,
-        settings.IMAGE_STORAGE_PATH,
-        settings.MUSIC_DOWNLOAD_PATH,
-        settings.BACKUP_PATH,
-    ]
-    
-    for directory in directories_to_create:
-        if not os.path.exists(directory):
-            logger.info(f"📁 Creating directory: {directory}")
-            os.makedirs(directory, exist_ok=True)
-        else:
-            logger.info(f"✅ Directory exists: {directory}")
-    
     await init_db()
     
     logger.info("✅ Database initialized")
