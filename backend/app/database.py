@@ -29,7 +29,8 @@ def get_db():
 async def init_db():
     """Initialize database tables"""
     # Import all models to ensure they are registered
-    from .models import user, song
+    from .models.user import User
+    from .models.song import UserLibrary, Playlist, PlaylistSong, DownloadStatus
     
     # Create all tables
     Base.metadata.create_all(bind=engine)
