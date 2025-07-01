@@ -6,7 +6,11 @@ import os
 
 
 class Settings(BaseSettings):
-    model_config = ConfigDict(extra='ignore')
+    model_config = ConfigDict(
+        extra='ignore',
+        env_file=".env",
+        case_sensitive=True
+    )
     # Database
     DATABASE_URL: str = "postgresql://musicuser:musicpass@localhost:5433/musicdb"
     
@@ -94,10 +98,6 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
 
 
 settings = Settings()
