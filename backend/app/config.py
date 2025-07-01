@@ -1,10 +1,12 @@
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 from typing import List
 import secrets
 import os
 
 
 class Settings(BaseSettings):
+    model_config = ConfigDict(extra='ignore')
     # Database
     DATABASE_URL: str = "postgresql://musicuser:musicpass@localhost:5433/musicdb"
     
