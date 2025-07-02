@@ -1,4 +1,3 @@
-from celery import current_app
 from sqlalchemy.orm import Session
 from .database import SessionLocal
 from .models.song import UserLibrary
@@ -6,12 +5,13 @@ from .services.download_service import DownloadService
 from .services.elasticsearch_service import ElasticsearchService
 from .services.backup_service import backup_service
 from .services.image_service import ImageService
+from .worker import celery_app
 from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
 
-@current_app.task(bind=True, max_retries=3)
+@celery_app.task(bind=True, max_retries=3)
 def download_song(self, spotify_id: str, user_id: int):
     """
     Background task to download a song from YouTube and index in Elasticsearch.
@@ -160,7 +160,7 @@ def download_song(self, spotify_id: str, user_id: int):
         
         return {"status": "error", "message": str(exc)}
 
-@current_app.task
+@celery_app.task
 def process_audio(file_path: str, song_id: int):
     """
     Background task to process audio files (normalize volume, extract metadata, etc.)
@@ -180,7 +180,7 @@ def process_audio(file_path: str, song_id: int):
         logger.error(f"Audio processing failed for song {song_id}: {str(exc)}")
         return {"status": "error", "message": str(exc)}
 
-@current_app.task
+@celery_app.task
 def cleanup_failed_downloads():
     """
     Periodic task to clean up failed downloads and retry them.
@@ -224,7 +224,7 @@ def cleanup_failed_downloads():
         logger.error(f"Cleanup task failed: {str(exc)}")
         return {"status": "error", "message": str(exc)}
 
-@current_app.task
+@celery_app.task
 def daily_backup():
     """
     Daily backup task for all databases.
@@ -258,7 +258,7 @@ def daily_backup():
         logger.error(f"Daily backup task failed: {str(exc)}")
         return {"status": "error", "message": str(exc)}
 
-@current_app.task
+@celery_app.task
 def manual_backup():
     """
     Manual backup task that can be triggered on demand.
@@ -279,7 +279,7 @@ def manual_backup():
         logger.error(f"Manual backup task failed: {str(exc)}")
         return {"status": "error", "message": str(exc)}
 
-@current_app.task
+@celery_app.task
 def cleanup_unused_images():
     """
     Periodic task to clean up unused album artwork files.
@@ -318,7 +318,7 @@ def cleanup_unused_images():
         return {"status": "error", "message": str(exc)}
 
 
-@current_app.task
+@celery_app.task
 def update_metrics():
     """Update Prometheus metrics periodically"""
     try:
