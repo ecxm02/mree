@@ -11,7 +11,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      fontFamily: GoogleFonts.inter().fontFamily,
+      fontFamily: GoogleFonts.dmSans().fontFamily,
       colorScheme: const ColorScheme.dark(
         primary: primaryColor,
         surface: backgroundColor,
@@ -21,7 +21,7 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: backgroundColor,
         elevation: 0,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.dmSans(
           color: Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -33,7 +33,56 @@ class AppTheme {
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
       ),
-      textTheme: GoogleFonts.interTextTheme(),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: surfaceColor,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: primaryColor, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red, width: 2),
+        ),
+        labelStyle: GoogleFonts.dmSans(
+          color: Colors.white70,
+          fontSize: 16,
+        ),
+        hintStyle: GoogleFonts.dmSans(
+          color: Colors.white54,
+          fontSize: 16,
+        ),
+        helperStyle: GoogleFonts.dmSans(
+          color: Colors.white70,
+          fontSize: 12,
+        ),
+        errorStyle: GoogleFonts.dmSans(
+          color: Colors.red,
+          fontSize: 12,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: primaryColor,
+        selectionColor: Color(0x331DB954),
+        selectionHandleColor: primaryColor,
+      ),
+      textTheme: GoogleFonts.dmSansTextTheme(ThemeData.dark().textTheme).apply(
+        bodyColor: Colors.white,
+        displayColor: Colors.white,
+      ),
     );
   }
 }

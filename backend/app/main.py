@@ -88,6 +88,12 @@ async def root():
         "status": "running"
     }
 
+
+@app.get("/health")
+async def simple_health():
+    """Simple health check for Docker health checks"""
+    return {"status": "ok"}
+
 @app.get("/metrics")
 async def metrics():
     """Prometheus metrics endpoint"""

@@ -41,8 +41,24 @@ dependencies:
   # Icons and images
   cached_network_image: ^3.3.0
   
-  # State management (we'll start simple)
+  # State management
   provider: ^6.1.1
+  
+  # HTTP requests
+  http: ^1.1.0
+  dio: ^5.3.2
+  
+  # JSON serialization
+  json_annotation: ^4.8.1
+  
+  # Local storage
+  shared_preferences: ^2.2.2
+  
+  # Audio player
+  just_audio: ^0.9.36
+  
+  # Media controls
+  audio_service: ^0.18.12
 
 dev_dependencies:
   flutter_test:
@@ -54,6 +70,10 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  
+  # JSON serialization
+  json_serializable: ^6.7.1
+  build_runner: ^2.4.7
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -39,6 +39,12 @@ services:
       - music-db
       - music-redis
       - music-search
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
 
   # PostgreSQL database
@@ -52,6 +58,12 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - ${POSTGRES_DATA_PATH}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
 
   # Redis cache and queue
@@ -61,6 +73,12 @@ services:
       - "6380:6379"  # External 6380 to avoid Immich conflict
     volumes:
       - ${REDIS_DATA_PATH}:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
 
   # Elasticsearch for search
@@ -75,6 +93,12 @@ services:
     volumes:
       - ${ELASTICSEARCH_DATA_PATH}:/usr/share/elasticsearch/data
     user: "${ELASTICSEARCH_USER_ID}:${ELASTICSEARCH_GROUP_ID}"  # Fix permissions issue
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
 
   # Background worker for downloads
@@ -109,6 +133,12 @@ services:
       - music-db
       - music-redis
       - music-search
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.worker.celery_app inspect ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
 
   # Celery Beat for scheduled tasks (backups)
@@ -138,4 +168,10 @@ services:
       - music-db
       - music-redis
       - music-search
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.worker.celery_app inspect ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
