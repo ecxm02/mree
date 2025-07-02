@@ -56,33 +56,23 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.red, width: 2),
         ),
-        labelStyle: GoogleFonts.dmSans(
-          color: Colors.white70,
-          fontSize: 16,
+        labelStyle: GoogleFonts.dmSans(color: Colors.white70, fontSize: 16),
+        hintStyle: GoogleFonts.dmSans(color: Colors.white54, fontSize: 16),
+        helperStyle: GoogleFonts.dmSans(color: Colors.white70, fontSize: 12),
+        errorStyle: GoogleFonts.dmSans(color: Colors.red, fontSize: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
         ),
-        hintStyle: GoogleFonts.dmSans(
-          color: Colors.white54,
-          fontSize: 16,
-        ),
-        helperStyle: GoogleFonts.dmSans(
-          color: Colors.white70,
-          fontSize: 12,
-        ),
-        errorStyle: GoogleFonts.dmSans(
-          color: Colors.red,
-          fontSize: 12,
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
       textSelectionTheme: const TextSelectionThemeData(
         cursorColor: primaryColor,
         selectionColor: Color(0x331DB954),
         selectionHandleColor: primaryColor,
       ),
-      textTheme: GoogleFonts.dmSansTextTheme(ThemeData.dark().textTheme).apply(
-        bodyColor: Colors.white,
-        displayColor: Colors.white,
-      ),
+      textTheme: GoogleFonts.dmSansTextTheme(
+        ThemeData.dark().textTheme,
+      ).apply(bodyColor: Colors.white, displayColor: Colors.white),
     );
   }
 }

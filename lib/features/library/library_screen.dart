@@ -159,13 +159,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   });
                 }
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Failed to load popular songs: ${e.toString()}',
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Failed to load popular songs: ${e.toString()}',
+                      ),
                     ),
-                  ),
-                );
+                  );
+                }
               }
             },
           ),
@@ -276,15 +278,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
             song.thumbnailUrl != null
                 ? ClipRRect(
                   borderRadius: BorderRadius.circular(4),
-                  child: CachedNetworkImage(
-                    imageUrl:
-                        song.thumbnailUrl!.startsWith('http')
-                            ? song.thumbnailUrl!
-                            : '', // Will need to be handled differently for local images
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => const Icon(Icons.music_note),
-                    errorWidget:
-                        (context, url, error) => const Icon(Icons.music_note),
+                  child: FutureBuilder<String>(
+                    future: ApiService.instance.buildImageUrl(
+                      song.thumbnailUrl,
+                    ),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                        return CachedNetworkImage(
+                          imageUrl: snapshot.data!,
+                          fit: BoxFit.cover,
+                          placeholder:
+                              (context, url) => const Icon(Icons.music_note),
+                          errorWidget:
+                              (context, url, error) =>
+                                  const Icon(Icons.music_note),
+                        );
+                      }
+                      return const Icon(Icons.music_note);
+                    },
                   ),
                 )
                 : const Icon(Icons.music_note),
@@ -340,14 +351,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
       if (song.spotifyId != null) {
         await ApiService.instance.playSong(song.spotifyId!);
         await ApiService.instance.markSongAsPlayed(song.spotifyId!);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Playing ${song.title}')));
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Playing ${song.title}')));
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to play song: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to play song: ${e.toString()}')),
+        );
+      }
     }
   }
 
