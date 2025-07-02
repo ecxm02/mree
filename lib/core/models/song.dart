@@ -46,7 +46,7 @@ class Song {
     if (duration == null) return '';
     final minutes = duration! ~/ 60;
     final seconds = duration! % 60;
-    return '${minutes}:${seconds.toString().padLeft(2, '0')}';
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
 
   bool get isDownloaded => downloadStatus == 'completed';

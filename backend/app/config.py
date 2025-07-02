@@ -28,8 +28,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
     # Security
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080"]
-    ALLOWED_HOSTS: List[str] = ["localhost", "127.0.0.1"]
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080", "http://100.67.83.60:8000", "*"]
+    ALLOWED_HOSTS: List[str] = ["localhost", "127.0.0.1", "100.67.83.60", "*"]
     
     # File storage paths
     MUSIC_STORAGE_PATH: str
@@ -75,9 +75,9 @@ class Settings(BaseSettings):
     DEFAULT_USER_QUOTA_MB: int = 1000
     MAX_USER_QUOTA_MB: int = 10000
     
-    # Background job settings
-    CELERY_BROKER_URL: str = "redis://localhost:6380/1"
-    CELERY_RESULT_BACKEND: str = "redis://localhost:6380/2"
+    # Background job settings - These are defaults, actual values come from REDIS_URL
+    CELERY_BROKER_URL: str = "redis://music-redis:6379/1"
+    CELERY_RESULT_BACKEND: str = "redis://music-redis:6379/2"
     
     # Celery worker settings
     CELERY_WORKER_PREFETCH_MULTIPLIER: int

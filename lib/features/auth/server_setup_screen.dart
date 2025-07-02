@@ -13,7 +13,7 @@ class _ServerSetupScreenState extends State<ServerSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _ipController = TextEditingController();
   final _portController = TextEditingController(text: '8000');
-  bool _isLoading = false;
+  final bool _isLoading = false;
   bool _isConnecting = false;
 
   @override
