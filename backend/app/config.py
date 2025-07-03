@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
 from typing import List
+from .constants import AudioConfig, SearchConfig, UserConfig, AppConfig, NetworkConfig, RateLimitConfig
 
 
 class Settings(BaseSettings):
@@ -61,21 +62,25 @@ class Settings(BaseSettings):
     PORT: int
     WORKERS: int = 1
     
-    # Rate limiting (requests per time window)
-    RATE_LIMIT_SEARCH: int = 60  # per minute
-    RATE_LIMIT_DOWNLOAD: int = 10  # per minute
-    RATE_LIMIT_AUTH: int = 5  # per 5 minutes
-    RATE_LIMIT_REGISTER: int = 3  # per hour
+    # Rate limiting (using constants)
+    RATE_LIMIT_SEARCH: int = RateLimitConfig.SEARCH_REQUESTS_PER_MINUTE
+    RATE_LIMIT_DOWNLOAD: int = RateLimitConfig.DOWNLOAD_REQUESTS_PER_MINUTE
+    RATE_LIMIT_AUTH: int = RateLimitConfig.AUTH_REQUESTS_PER_5_MINUTES
+    RATE_LIMIT_REGISTER: int = RateLimitConfig.REGISTER_REQUESTS_PER_HOUR
     
-    # Audio settings
-    DEFAULT_AUDIO_QUALITY: int = 320
-    SUPPORTED_FORMATS: List[str] = ["mp3", "flac", "ogg"]
+    # Audio settings (using constants)
+    DEFAULT_AUDIO_QUALITY: int = AudioConfig.DEFAULT_QUALITY
+    SUPPORTED_FORMATS: List[str] = AudioConfig.SUPPORTED_FORMATS
     
-    # User storage quotas (in MB)
-    DEFAULT_USER_QUOTA_MB: int = 1000
-    MAX_USER_QUOTA_MB: int = 10000
+    # User storage quotas (using constants)
+    DEFAULT_USER_QUOTA_MB: int = UserConfig.DEFAULT_QUOTA_MB
+    MAX_USER_QUOTA_MB: int = UserConfig.MAX_QUOTA_MB
     
-    # Background job settings - These are defaults, actual values come from REDIS_URL
+    # Search configuration (using constants)
+    DEFAULT_SEARCH_LIMIT: int = SearchConfig.DEFAULT_SEARCH_LIMIT
+    MAX_SEARCH_LIMIT: int = SearchConfig.MAX_SEARCH_LIMIT
+    
+    # Background job settings
     CELERY_BROKER_URL: str = "redis://music-redis:6379/1"
     CELERY_RESULT_BACKEND: str = "redis://music-redis:6379/2"
     
@@ -87,7 +92,7 @@ class Settings(BaseSettings):
     
     # Download settings
     MAX_DOWNLOAD_SIZE_MB: int = 50
-    DOWNLOAD_TIMEOUT_SECONDS: int = 300
+    DOWNLOAD_TIMEOUT_SECONDS: int = NetworkConfig.DEFAULT_TIMEOUT
     MAX_CONCURRENT_DOWNLOADS: int = 3
     
     # Health check settings

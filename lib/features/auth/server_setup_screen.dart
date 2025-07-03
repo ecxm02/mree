@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/services/server_config_service.dart';
 import '../../core/services/api_service.dart';
+import '../../core/constants/app_constants.dart';
 
 class ServerSetupScreen extends StatefulWidget {
   const ServerSetupScreen({super.key});
@@ -12,7 +13,7 @@ class ServerSetupScreen extends StatefulWidget {
 class _ServerSetupScreenState extends State<ServerSetupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _ipController = TextEditingController();
-  final _portController = TextEditingController(text: '8000');
+  final _portController = TextEditingController(text: AppConstants.defaultPort);
   final bool _isLoading = false;
   bool _isConnecting = false;
 
@@ -95,7 +96,7 @@ class _ServerSetupScreenState extends State<ServerSetupScreen> {
                   controller: _portController,
                   decoration: const InputDecoration(
                     labelText: 'Port',
-                    hintText: '8000',
+                    hintText: AppConstants.defaultPortHint,
                     prefixIcon: Icon(Icons.settings_ethernet),
                     border: OutlineInputBorder(),
                   ),
@@ -163,7 +164,7 @@ class _ServerSetupScreenState extends State<ServerSetupScreen> {
                         '• Check your router\'s admin panel\n'
                         '• Use "hostname -I" on the Pi\n'
                         '• Use network scanner apps\n'
-                        '• Common format: 192.168.1.x',
+                        '• Common format: ${AppConstants.defaultServerHint}',
                         style: TextStyle(color: Colors.blue[200], fontSize: 12),
                       ),
                     ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/services/server_config_service.dart';
 import '../../core/services/api_service.dart';
+import '../../core/constants/app_constants.dart';
 import '../auth/auth_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -171,13 +172,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const ListTile(
                             leading: Icon(Icons.info),
                             title: Text('Version'),
-                            subtitle: Text('1.0.0'),
+                            subtitle: Text(AppConstants.appVersion),
                             contentPadding: EdgeInsets.zero,
                           ),
                           const ListTile(
                             leading: Icon(Icons.code),
-                            title: Text('MREE'),
-                            subtitle: Text('Music streaming made simple'),
+                            title: Text(AppConstants.appName),
+                            subtitle: Text(AppConstants.appDescription),
                             contentPadding: EdgeInsets.zero,
                           ),
                         ],
@@ -192,7 +193,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showChangeServerDialog() {
     final ipController = TextEditingController(text: _currentServerIp ?? '');
     final portController = TextEditingController(
-      text: _currentServerPort ?? '8000',
+      text: _currentServerPort ?? AppConstants.defaultPort,
     );
 
     showDialog(
@@ -207,7 +208,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   controller: ipController,
                   decoration: const InputDecoration(
                     labelText: 'Server IP Address',
-                    hintText: '192.168.1.100',
+                    hintText: AppConstants.defaultServerHint,
                   ),
                   keyboardType: TextInputType.number,
                 ),
@@ -216,7 +217,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   controller: portController,
                   decoration: const InputDecoration(
                     labelText: 'Port',
-                    hintText: '8000',
+                    hintText: AppConstants.defaultPortHint,
                   ),
                   keyboardType: TextInputType.number,
                 ),

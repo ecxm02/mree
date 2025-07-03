@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from ..database import SessionLocal, engine
 from ..services.elasticsearch_service import ElasticsearchService
 from ..config import settings
+from ..constants import AppConfig
 
 router = APIRouter(prefix="/health", tags=["health"])
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 class HealthStatus(BaseModel):
     status: str  # "healthy", "degraded", "unhealthy"
     timestamp: datetime
-    version: str = "1.0.0"
+    version: str = AppConfig.VERSION
     uptime_seconds: float
     checks: Dict[str, Any]
 

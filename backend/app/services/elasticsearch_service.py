@@ -6,6 +6,7 @@ from pathlib import Path
 from datetime import datetime
 
 from ..config import settings
+from ..constants import SearchConfig
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +175,7 @@ class ElasticsearchService:
         try:
             search_body = {
                 "query": {"match_all": {}},
-                "size": 10000,  # Adjust based on your expected song count
+                "size": SearchConfig.DEFAULT_ELASTICSEARCH_SIZE,  # Configurable search limit
                 "_source": ["spotify_id", "file_path", "file_size", "created_at", "last_streamed"]
             }
             

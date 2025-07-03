@@ -7,6 +7,7 @@ import logging
 import os
 
 from .config import settings
+from .constants import AppConfig
 from .database import init_db
 from .routers import auth, search, health, streaming, admin, tasks, images
 from .middleware.rate_limiting import RateLimitMiddleware
@@ -36,9 +37,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Music Streaming API",
-    description="Backend API for music streaming app with YouTube downloads and Spotify metadata",
-    version="1.0.0",
+    title=AppConfig.NAME,
+    description=AppConfig.DESCRIPTION,
+    version=AppConfig.VERSION,
     lifespan=lifespan,
     docs_url="/docs" if settings.DEBUG else None,  # Disable docs in production
     redoc_url="/redoc" if settings.DEBUG else None
@@ -82,8 +83,8 @@ app.include_router(images.router, prefix="/api")
 @app.get("/")
 async def root():
     return {
-        "message": "Music Streaming API",
-        "version": "1.0.0",
+        "message": AppConfig.NAME,
+        "version": AppConfig.VERSION,
         "status": "running"
     }
 

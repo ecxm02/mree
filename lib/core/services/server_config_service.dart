@@ -1,9 +1,10 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/app_constants.dart';
 
 class ServerConfigService {
-  static const String _serverIpKey = 'server_ip';
-  static const String _serverPortKey = 'server_port';
-  static const String _defaultPort = '8000';
+  static const String _serverIpKey = AppConstants.serverIpKey;
+  static const String _serverPortKey = AppConstants.serverPortKey;
+  static const String _defaultPort = AppConstants.defaultPort;
 
   static ServerConfigService? _instance;
   static ServerConfigService get instance =>

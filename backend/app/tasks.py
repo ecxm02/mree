@@ -5,6 +5,7 @@ from .services.download_service import DownloadService
 from .services.elasticsearch_service import ElasticsearchService
 from .services.backup_service import backup_service
 from .services.image_service import ImageService
+from .constants import SearchConfig
 from .worker import celery_app
 from datetime import datetime
 import logging
@@ -298,7 +299,7 @@ def cleanup_unused_images():
         query = {
             "query": {"match_all": {}},
             "_source": ["spotify_id"],
-            "size": 10000
+            "size": SearchConfig.DEFAULT_ELASTICSEARCH_SIZE
         }
         
         result = es_service.search_raw_sync(query)
