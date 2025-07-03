@@ -66,9 +66,8 @@ app.add_middleware(
 # Add custom exception handlers
 app.add_exception_handler(RequestValidationError, create_error_handler())
 
-# Static file serving for music and images
+# Static file serving for music
 app.mount("/music", StaticFiles(directory=settings.MUSIC_STORAGE_PATH), name="music")
-app.mount("/images", StaticFiles(directory=settings.IMAGE_STORAGE_PATH), name="images")
 
 # Include routers
 app.include_router(auth.router, prefix="/api")

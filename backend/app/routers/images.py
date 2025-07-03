@@ -22,8 +22,14 @@ async def get_album_art(filename: str):
         if not filename.endswith('.jpg') or '/' in filename or '\\' in filename:
             raise HTTPException(status_code=400, detail="Invalid filename")
         
-        # Construct file path
-        image_path = Path(settings.IMAGE_STORAGE_PATH) / filename
+        # Extract spotify_id for categorized lookup
+        spotify_id = filename.replace('.jpg', '')
+        if len(spotify_id) < 2:
+            raise HTTPException(status_code=400, detail="Invalid filename format")
+        
+        # Construct categorized file path
+        prefix = spotify_id[:2]
+        image_path = Path(settings.IMAGE_STORAGE_PATH) / prefix / filename
         
         # Check if file exists
         if not image_path.exists() or not image_path.is_file():
