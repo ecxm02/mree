@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../models/song.dart';
+import '../constants/app_constants.dart';
 import 'server_config_service.dart';
 
 class ApiService {
@@ -18,8 +19,8 @@ class ApiService {
   void _initializeDio() {
     _dio = Dio(
       BaseOptions(
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
+        connectTimeout: AppConstants.defaultTimeout,
+        receiveTimeout: AppConstants.defaultTimeout,
         headers: {'Content-Type': 'application/json'},
       ),
     );
@@ -139,17 +140,17 @@ class ApiService {
   // Storage methods
   Future<String?> _getStoredToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
+    return prefs.getString(AppConstants.authTokenKey);
   }
 
   Future<void> _storeToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('auth_token', token);
+    await prefs.setString(AppConstants.authTokenKey, token);
   }
 
   Future<void> clearAuth() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('auth_token');
+    await prefs.remove(AppConstants.authTokenKey);
   }
 
   Future<bool> isAuthenticated() async {

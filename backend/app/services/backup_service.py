@@ -9,6 +9,7 @@ from typing import Dict, Any
 import asyncio
 
 from ..config import settings
+from ..constants import AppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -196,7 +197,7 @@ class BackupService:
         """Create metadata file for the backup"""
         metadata = {
             "backup_date": datetime.now().isoformat(),
-            "version": "1.0",
+            "version": AppConfig.VERSION,
             "backup_results": results,
             "config": {
                 "postgres_data_path": str(self.postgres_data_path),

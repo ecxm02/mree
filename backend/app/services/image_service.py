@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 import hashlib
 
 from ..config import settings
+from ..constants import AudioConfig
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class ImageService:
             
             # Save the image
             with open(local_path, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
+                for chunk in response.iter_content(chunk_size=AudioConfig.CHUNK_SIZE):
                     f.write(chunk)
             
             # Verify file was created and has content

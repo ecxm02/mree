@@ -16,6 +16,7 @@ from ..services.elasticsearch_service import ElasticsearchService
 from ..services.spotify_service import SpotifyService
 from ..services.image_service import ImageService
 from ..config import settings
+from ..constants import AudioConfig
 
 logger = logging.getLogger(__name__)
 
@@ -173,15 +174,15 @@ class DownloadService:
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'extractaudio': True,
-                'audioformat': 'mp3',
-                'audioquality': '192',
+                'audioformat': AudioConfig.DEFAULT_FORMAT,
+                'audioquality': str(settings.DEFAULT_AUDIO_QUALITY),
                 'outtmpl': str(base_path) + '.%(ext)s',
                 'quiet': False,  # Enable logging to see what's happening
                 'no_warnings': False,
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
+                    'preferredcodec': AudioConfig.DEFAULT_FORMAT,
+                    'preferredquality': str(settings.DEFAULT_AUDIO_QUALITY),
                     'nopostoverwrites': False,
                 }],
                 'prefer_ffmpeg': True,
