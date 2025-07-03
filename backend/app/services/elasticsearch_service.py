@@ -284,3 +284,27 @@ class ElasticsearchService:
         except Exception as e:
             logger.error(f"Error getting total song count: {e}")
             return 0
+    
+    async def update_song_status(self, spotify_id: str, status: str) -> bool:
+        """Update the download status of a song"""
+        try:
+            update_body = {
+                "doc": {
+                    "download_status": status,
+                    "updated_at": datetime.utcnow().isoformat()
+                }
+            }
+            
+            response = self.es.update(
+                index=self.songs_index,
+                id=spotify_id,
+                body=update_body,
+                refresh=True
+            )
+            
+            logger.debug(f"Updated song status for {spotify_id}: {status}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating song status for {spotify_id}: {e}")
+            return False

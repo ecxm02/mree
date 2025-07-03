@@ -208,11 +208,6 @@ class DownloadService:
         except Exception as e:
             logger.error(f"Download error: {e}")
             return False
-            
-        except Exception as e:
-            logger.error(f"Download error: {e}")
-        
-        return None
     
     def _make_safe_filename(self, filename: str) -> str:
         """Create a safe filename by removing/replacing invalid characters"""
