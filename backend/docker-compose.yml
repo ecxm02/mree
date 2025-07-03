@@ -104,7 +104,7 @@ services:
   # Background worker for downloads
   music-worker:
     build: .
-    command: celery -A app.worker.celery_app worker --loglevel=info
+    command: celery -A app.worker.celery_app worker --loglevel=info --queues=celery,downloads,processing
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@music-db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://music-redis:6379/0
