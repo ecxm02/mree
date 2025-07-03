@@ -32,9 +32,14 @@ class ImageService:
             return None
             
         try:
+            # Create categorized directory structure (same as music files)
+            prefix = spotify_id[:2]
+            category_dir = self.image_path / prefix
+            category_dir.mkdir(parents=True, exist_ok=True)
+            
             # Create filename based on spotify_id
             filename = f"{spotify_id}.jpg"
-            local_path = self.image_path / filename
+            local_path = category_dir / filename
             
             # Skip if already exists
             if local_path.exists() and local_path.stat().st_size > 0:
@@ -82,8 +87,10 @@ class ImageService:
         Returns:
             API URL path for the image, or None if not found
         """
+        prefix = spotify_id[:2]
+        category_dir = self.image_path / prefix
         filename = f"{spotify_id}.jpg"
-        local_path = self.image_path / filename
+        local_path = category_dir / filename
         
         if local_path.exists() and local_path.stat().st_size > 0:
             return f"/api/images/albums/{filename}"
@@ -101,8 +108,10 @@ class ImageService:
         Returns:
             Local API URL if available, original URL as fallback
         """
+        prefix = spotify_id[:2]
+        category_dir = self.image_path / prefix
         filename = f"{spotify_id}.jpg"
-        local_path = self.image_path / filename
+        local_path = category_dir / filename
         
         # Check if local file exists and is valid
         if local_path.exists() and local_path.stat().st_size > 0:
@@ -133,8 +142,10 @@ class ImageService:
         Returns:
             True if image is available (local or repaired), False otherwise
         """
+        prefix = spotify_id[:2]
+        category_dir = self.image_path / prefix
         filename = f"{spotify_id}.jpg"
-        local_path = self.image_path / filename
+        local_path = category_dir / filename
         
         # Check if file exists and is valid
         if local_path.exists() and local_path.stat().st_size > 0:
@@ -162,17 +173,24 @@ class ImageService:
             deleted_count = 0
             freed_space = 0
             
-            # Get all image files
-            for image_file in self.image_path.glob("*.jpg"):
-                # Extract spotify_id from filename
-                spotify_id = image_file.stem
-                
-                if spotify_id not in active_spotify_ids:
-                    file_size = image_file.stat().st_size
-                    image_file.unlink()
-                    deleted_count += 1
-                    freed_space += file_size
-                    logger.info(f"Deleted unused album art: {image_file}")
+            # Get all image files from all subdirectories
+            for prefix_dir in self.image_path.iterdir():
+                if prefix_dir.is_dir():
+                    for image_file in prefix_dir.glob("*.jpg"):
+                        # Extract spotify_id from filename
+                        spotify_id = image_file.stem
+                        
+                        if spotify_id not in active_spotify_ids:
+                            file_size = image_file.stat().st_size
+                            image_file.unlink()
+                            deleted_count += 1
+                            freed_space += file_size
+                            logger.info(f"Deleted unused album art: {image_file}")
+                    
+                    # Remove empty directories
+                    if not any(prefix_dir.iterdir()):
+                        prefix_dir.rmdir()
+                        logger.info(f"Removed empty directory: {prefix_dir}")
             
             return {
                 "status": "success",

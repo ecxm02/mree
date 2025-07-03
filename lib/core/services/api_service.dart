@@ -123,11 +123,11 @@ class ApiService {
 
   // Streaming methods
   Future<void> playSong(String spotifyId) async {
-    await _dio.get('/streaming/play/$spotifyId');
+    await _dio.get('/stream/play/$spotifyId');
   }
 
   Future<void> markSongAsPlayed(String spotifyId) async {
-    await _dio.post('/streaming/mark-played/$spotifyId');
+    await _dio.post('/stream/mark-played/$spotifyId');
   }
 
   // Health check
