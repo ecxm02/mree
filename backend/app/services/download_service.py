@@ -107,24 +107,21 @@ class DownloadService:
                 if original_image_url:
                     local_image_path = self.image_service.download_album_art(spotify_id, original_image_url)
                 
-                # Add to Elasticsearch
-                song_data = {
-                    "spotify_id": spotify_id,
-                    "title": track_details["name"],
-                    "artist": ", ".join([artist["name"] for artist in track_details["artists"]]),
-                    "album": track_details["album"]["name"],
-                    "duration": track_details["duration_ms"] // 1000,
+                # Update Elasticsearch with completed download info
+                update_data = {
                     "file_path": str(final_file_path),
                     "file_size": final_file_path.stat().st_size if final_file_path.exists() else 0,
-                    "thumbnail_path": local_image_path,
-                    "original_thumbnail_url": original_image_url,
                     "youtube_url": youtube_url,
-                    "download_count": 1,
-                    "created_at": datetime.utcnow().isoformat(),
+                    "download_status": "completed",
+                    "completed_at": datetime.utcnow().isoformat(),
                     "updated_at": datetime.utcnow().isoformat()
                 }
                 
-                success = await self.es_service.add_song(song_data)
+                # Update thumbnail if we have it
+                if local_image_path:
+                    update_data["thumbnail_path"] = local_image_path
+                
+                success = await self.es_service.update_song(spotify_id, update_data)
                 
                 if success:
                     logger.info(f"Successfully downloaded and indexed: {track_details['name']}")
@@ -170,14 +167,17 @@ class DownloadService:
     def _download_audio(self, youtube_url: str, file_path: Path) -> bool:
         """Download audio from YouTube URL to specified path"""
         try:
+            # Remove .mp3 extension from file_path for the template
+            base_path = file_path.with_suffix('')
+            
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'extractaudio': True,
                 'audioformat': 'mp3',
                 'audioquality': '192',
-                'outtmpl': str(file_path.with_suffix('.%(ext)s')),
-                'quiet': True,
-                'no_warnings': True,
+                'outtmpl': str(base_path) + '.%(ext)s',
+                'quiet': False,  # Enable logging to see what's happening
+                'no_warnings': False,
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
@@ -185,23 +185,40 @@ class DownloadService:
                 }],
             }
             
+            logger.info(f"Starting download from {youtube_url} to {base_path}")
+            
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([youtube_url])
                 
-                # Check if file was created successfully
-                mp3_file = file_path.with_suffix('.mp3')
-                if mp3_file.exists() and mp3_file.stat().st_size > 0:
-                    # If final path is different, move it
-                    if mp3_file != file_path:
-                        shutil.move(str(mp3_file), str(file_path))
+                # Check if the target MP3 file was created
+                if file_path.exists() and file_path.stat().st_size > 0:
+                    logger.info(f"Download successful: {file_path} ({file_path.stat().st_size} bytes)")
                     return True
                 
-                # Sometimes the file extension might be different
-                for ext in ['.m4a', '.webm', '.opus']:
-                    potential_file = file_path.with_suffix(ext)
+                # Check for MP3 file with base name
+                mp3_file = base_path.with_suffix('.mp3')
+                if mp3_file.exists() and mp3_file.stat().st_size > 0:
+                    if mp3_file != file_path:
+                        logger.info(f"Moving {mp3_file} to {file_path}")
+                        shutil.move(str(mp3_file), str(file_path))
+                    logger.info(f"Download successful: {file_path} ({file_path.stat().st_size} bytes)")
+                    return True
+                
+                # Check for other formats that might need conversion
+                for ext in ['.m4a', '.webm', '.opus', '.wav']:
+                    potential_file = base_path.with_suffix(ext)
                     if potential_file.exists() and potential_file.stat().st_size > 0:
+                        logger.info(f"Found {ext} file, moving to {file_path}")
                         shutil.move(str(potential_file), str(file_path))
+                        logger.info(f"Download successful: {file_path} ({file_path.stat().st_size} bytes)")
                         return True
+            
+            logger.error(f"No output file found after download. Expected: {file_path}")
+            # List files in the directory to see what was created
+            parent_dir = file_path.parent
+            if parent_dir.exists():
+                files = list(parent_dir.glob('*'))
+                logger.error(f"Files in {parent_dir}: {files}")
             
             return False
             

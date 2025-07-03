@@ -334,3 +334,24 @@ class ElasticsearchService:
         except Exception as e:
             logger.error(f"Error updating song status for {spotify_id}: {e}")
             return False
+    
+    async def update_song(self, spotify_id: str, update_data: Dict[str, Any]) -> bool:
+        """Update a song document in Elasticsearch (async version)"""
+        try:
+            update_body = {
+                "doc": update_data
+            }
+            
+            response = self.es.update(
+                index=self.songs_index,
+                id=spotify_id,
+                body=update_body,
+                refresh=True
+            )
+            
+            logger.debug(f"Updated song in Elasticsearch: {spotify_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating song in Elasticsearch: {e}")
+            return False
