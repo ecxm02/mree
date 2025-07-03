@@ -235,10 +235,30 @@ class ElasticsearchService:
     
     def update_song_status_sync(self, spotify_id: str, status: str) -> bool:
         """Synchronous version of update_song_status for Celery tasks"""
-        return self.update_song_sync(spotify_id, {
-            "download_status": status,
-            "updated_at": datetime.utcnow().isoformat()
-        })
+        try:
+            update_body = {
+                "doc": {
+                    "download_status": status,
+                    "updated_at": datetime.utcnow().isoformat()
+                },
+                "upsert": {
+                    "spotify_id": spotify_id,
+                    "download_status": status,
+                    "created_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.utcnow().isoformat()
+                }
+            }
+            
+            self.es.update(
+                index=self.songs_index,
+                id=spotify_id,
+                body=update_body,
+                refresh=True
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error updating song status (sync): {e}")
+            return False
     
     def increment_download_count_sync(self, spotify_id: str) -> bool:
         """Synchronous version of increment_download_count for Celery tasks"""
@@ -291,6 +311,12 @@ class ElasticsearchService:
             update_body = {
                 "doc": {
                     "download_status": status,
+                    "updated_at": datetime.utcnow().isoformat()
+                },
+                "upsert": {
+                    "spotify_id": spotify_id,
+                    "download_status": status,
+                    "created_at": datetime.utcnow().isoformat(),
                     "updated_at": datetime.utcnow().isoformat()
                 }
             }
