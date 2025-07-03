@@ -24,9 +24,25 @@ class DownloadService:
         """Initialize download service"""
         self.download_path = Path(settings.MUSIC_DOWNLOAD_PATH)
         self.download_path.mkdir(parents=True, exist_ok=True)
+        self.storage_path = Path(settings.MUSIC_STORAGE_PATH)
+        self.storage_path.mkdir(parents=True, exist_ok=True)
         self.es_service = ElasticsearchService()
         self.spotify_service = SpotifyService()
         self.image_service = ImageService()
+    
+    def _get_temp_download_path(self, spotify_id: str) -> Path:
+        """Generate temporary download path for a song"""
+        prefix = spotify_id[:2]
+        temp_path = self.download_path / prefix
+        temp_path.mkdir(parents=True, exist_ok=True)
+        return temp_path / f"{spotify_id}.mp3"
+    
+    def _get_final_storage_path(self, spotify_id: str) -> Path:
+        """Generate final storage path for a song"""
+        prefix = spotify_id[:2]
+        final_path = self.storage_path / prefix
+        final_path.mkdir(parents=True, exist_ok=True)
+        return final_path / f"{spotify_id}.mp3"
     
     async def download_song(self, spotify_id: str) -> bool:
         """Download a song by Spotify ID to central storage with race condition protection"""
@@ -70,13 +86,20 @@ class DownloadService:
                 await self.es_service.update_song_status(spotify_id, "failed")
                 return False
             
-            # Generate file path (organized by spotify_id prefix)
-            file_path = self.es_service.get_file_path(spotify_id)
-            file_path_obj = Path(file_path)
-            file_path_obj.parent.mkdir(parents=True, exist_ok=True)
+            # Generate temporary download path and final storage path
+            temp_file_path = self._get_temp_download_path(spotify_id)
+            final_file_path = self._get_final_storage_path(spotify_id)
             
-            # Download the audio
-            if self._download_audio(youtube_url, file_path_obj):
+            # Download the audio to temporary location
+            if self._download_audio(youtube_url, temp_file_path):
+                # Move file from temp to final storage location
+                try:
+                    shutil.move(str(temp_file_path), str(final_file_path))
+                    logger.info(f"Moved downloaded file from {temp_file_path} to {final_file_path}")
+                except Exception as e:
+                    logger.error(f"Failed to move file from temp to storage: {e}")
+                    await self.es_service.update_song_status(spotify_id, "failed")
+                    return False
                 # Download album artwork
                 original_image_url = track_details["album"]["images"][0]["url"] if track_details["album"]["images"] else None
                 local_image_path = None
@@ -91,8 +114,8 @@ class DownloadService:
                     "artist": ", ".join([artist["name"] for artist in track_details["artists"]]),
                     "album": track_details["album"]["name"],
                     "duration": track_details["duration_ms"] // 1000,
-                    "file_path": str(file_path),
-                    "file_size": file_path_obj.stat().st_size if file_path_obj.exists() else 0,
+                    "file_path": str(final_file_path),
+                    "file_size": final_file_path.stat().st_size if final_file_path.exists() else 0,
                     "thumbnail_path": local_image_path,
                     "original_thumbnail_url": original_image_url,
                     "youtube_url": youtube_url,
@@ -119,6 +142,8 @@ class DownloadService:
             return False
         finally:
             db.close()
+            # Clean up lock file
+            lock_path.unlink(missing_ok=True)
     
     def _search_youtube(self, query: str) -> Optional[str]:
         """Search YouTube for a song and return the best match URL"""
