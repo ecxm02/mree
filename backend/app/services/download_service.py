@@ -182,7 +182,10 @@ class DownloadService:
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
                     'preferredquality': '192',
+                    'nopostoverwrites': False,
                 }],
+                'prefer_ffmpeg': True,
+                'keepvideo': False,
             }
             
             logger.info(f"Starting download from {youtube_url} to {base_path}")
@@ -205,7 +208,7 @@ class DownloadService:
                     return True
                 
                 # Check for other formats that might need conversion
-                for ext in ['.m4a', '.webm', '.opus', '.wav']:
+                for ext in ['.m4a', '.webm', '.opus', '.wav', '.mhtml']:
                     potential_file = base_path.with_suffix(ext)
                     if potential_file.exists() and potential_file.stat().st_size > 0:
                         logger.info(f"Found {ext} file, moving to {file_path}")
