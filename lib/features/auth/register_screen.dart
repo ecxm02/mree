@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/services/api_service.dart';
 import '../../core/models/user.dart';
+import '../../core/utils/validation.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -58,13 +59,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a username';
-                    }
-                    if (value.length < 3) {
-                      return 'Username must be at least 3 characters';
-                    }
-                    return null;
+                    return PasswordValidator.validateUsername(value);
                   },
                 ),
                 const SizedBox(height: 16),
@@ -96,6 +91,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: 'Password',
+                    helperText: 'Min 8 chars, uppercase, lowercase, number',
+                    helperMaxLines: 2,
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -112,13 +109,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     border: const OutlineInputBorder(),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
-                    return null;
+                    return PasswordValidator.validatePassword(value);
                   },
                 ),
                 const SizedBox(height: 16),
