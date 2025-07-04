@@ -21,6 +21,7 @@ def download_song(self, spotify_id: str, user_id: int):
     - Elasticsearch: Primary music catalog (metadata, file paths, download status)
     - PostgreSQL: User-specific data only (libraries, playlists, user stats)
     """
+    logger.info(f"DOWNLOAD TASK STARTED: Processing download for Spotify ID {spotify_id}, User ID {user_id}")
     es_service = ElasticsearchService()
     
     try:
@@ -92,8 +93,11 @@ def download_song(self, spotify_id: str, user_id: int):
             es_service.update_song_status_sync(spotify_id, "downloading")
         
         # Step 3: Download the song using synchronous download service
+        logger.info(f"Starting actual download for {spotify_id}")
         download_service = DownloadService()
         result = download_service.download_song_sync(spotify_id)
+        
+        logger.info(f"Download service returned: {result}")
         
         if result["success"]:
             # Step 4: Update Elasticsearch with completed download info

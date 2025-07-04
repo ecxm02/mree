@@ -171,6 +171,15 @@ class DownloadService:
             # Remove .mp3 extension from file_path for the template
             base_path = file_path.with_suffix('')
             
+            # Check if ffmpeg is available first
+            import subprocess
+            try:
+                result = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True, timeout=10)
+                logger.info(f"FFmpeg is available: {result.stdout.split()[0:3] if result.returncode == 0 else 'NOT FOUND'}")
+            except Exception as e:
+                logger.error(f"FFmpeg check failed: {e}")
+                return False
+            
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'extractaudio': True,
@@ -179,6 +188,7 @@ class DownloadService:
                 'outtmpl': str(base_path) + '.%(ext)s',
                 'quiet': False,  # Enable logging to see what's happening
                 'no_warnings': False,
+                'verbose': True,  # Add verbose logging
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': AudioConfig.DEFAULT_FORMAT,
@@ -267,26 +277,45 @@ class DownloadService:
     def download_song_sync(self, spotify_id: str) -> dict:
         """Synchronous version of download_song for use in Celery tasks"""
         try:
+            logger.info(f"Starting sync download for Spotify ID: {spotify_id}")
+            
             # Use an event loop to run the async method
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
                 result = loop.run_until_complete(self.download_song(spotify_id))
+                logger.info(f"Async download result for {spotify_id}: {result}")
+                
                 if result:
-                    return {
-                        "success": True,
-                        "file_path": self.es_service.get_file_path(spotify_id),
-                        "spotify_id": spotify_id
-                    }
+                    # Get the actual file path and verify it exists
+                    final_file_path = self._get_final_storage_path(spotify_id)
+                    
+                    if final_file_path.exists() and final_file_path.stat().st_size > 0:
+                        file_size = final_file_path.stat().st_size
+                        logger.info(f"Download successful: {final_file_path} ({file_size} bytes)")
+                        
+                        return {
+                            "success": True,
+                            "file_path": str(final_file_path),
+                            "file_size": file_size,
+                            "spotify_id": spotify_id
+                        }
+                    else:
+                        logger.error(f"Download claimed success but file missing or empty: {final_file_path}")
+                        return {
+                            "success": False,
+                            "error": f"File missing or empty: {final_file_path}"
+                        }
                 else:
+                    logger.error(f"Download method returned False for {spotify_id}")
                     return {
                         "success": False,
-                        "error": "Download failed"
+                        "error": "Download method returned False"
                     }
             finally:
                 loop.close()
         except Exception as e:
-            logger.error(f"Sync download error for {spotify_id}: {e}")
+            logger.error(f"Sync download error for {spotify_id}: {e}", exc_info=True)
             return {
                 "success": False,
                 "error": str(e)
