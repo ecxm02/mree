@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
+import logging
 
 from ..database import get_db
 from ..models.user import User
@@ -11,6 +12,9 @@ from ..services.spotify_service import SpotifyService
 from ..services.elasticsearch_service import ElasticsearchService
 from ..services.image_service import ImageService
 from ..tasks import download_song
+from ..constants import SearchConfig
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -220,12 +224,12 @@ async def search_local_songs(
     search: SongSearch,
     current_user: User = Depends(get_current_user)
 ):
-    """Search downloaded songs by title, artist, or album using Elasticsearch"""
+    """Search downloaded songs with aggressive partial matching using multiple strategies"""
     
     es_service = ElasticsearchService()
     
-    # Build Elasticsearch query for fuzzy matching across title, artist, and album
-    query = {
+    # Strategy 1: Multi-match query with relaxed parameters for partial matching
+    multi_match_query = {
         "query": {
             "bool": {
                 "must": [
@@ -233,10 +237,17 @@ async def search_local_songs(
                     {
                         "multi_match": {
                             "query": search.query,
-                            "fields": ["title^2", "artist^1.5", "album"],
+                            "fields": [
+                                f"title^{SearchConfig.TITLE_BOOST}", 
+                                f"artist^{SearchConfig.ARTIST_BOOST}", 
+                                f"album^{SearchConfig.ALBUM_BOOST}"
+                            ],
                             "type": "best_fields",
-                            "fuzziness": "AUTO",
-                            "minimum_should_match": "75%"
+                            "fuzziness": SearchConfig.FUZZY_FUZZINESS,
+                            "prefix_length": SearchConfig.FUZZY_PREFIX_LENGTH,
+                            "max_expansions": SearchConfig.FUZZY_MAX_EXPANSIONS,
+                            "minimum_should_match": SearchConfig.MINIMUM_SHOULD_MATCH,
+                            "tie_breaker": SearchConfig.TIE_BREAKER
                         }
                     }
                 ]
@@ -245,26 +256,144 @@ async def search_local_songs(
         "size": search.limit
     }
     
-    results = await es_service.search_raw(query)
+    # Strategy 2: Wildcard query for very partial matches (e.g., "per*" matches "perfect")
+    wildcard_query = {
+        "query": {
+            "bool": {
+                "must": [
+                    {"term": {"download_status": "completed"}},
+                    {
+                        "bool": {
+                            "should": [
+                                {"wildcard": {"title": f"*{search.query.lower()}*"}},
+                                {"wildcard": {"artist": f"*{search.query.lower()}*"}},
+                                {"wildcard": {"album": f"*{search.query.lower()}*"}}
+                            ],
+                            "minimum_should_match": 1
+                        }
+                    }
+                ]
+            }
+        },
+        "size": search.limit
+    }
     
-    songs_data = []
-    for hit in results.get('hits', {}).get('hits', []):
-        song_doc = hit['_source']
-        songs_data.append(SongResponse(
-            id=0,  # Use 0 for Elasticsearch results (no database ID yet)
-            title=song_doc.get("title", ""),
-            artist=song_doc.get("artist", ""),
-            album=song_doc.get("album", ""),
-            duration=song_doc.get("duration", 0),
-            spotify_id=song_doc.get("spotify_id"),
-            youtube_url=song_doc.get("youtube_url"),
-            file_path=song_doc.get("file_path"),
-            thumbnail_url=get_thumbnail_url(song_doc),
-            download_status="completed",
-            created_at=song_doc.get("created_at")
-        ))
+    # Strategy 3: Prefix query for "starts with" matching
+    prefix_query = {
+        "query": {
+            "bool": {
+                "must": [
+                    {"term": {"download_status": "completed"}},
+                    {
+                        "bool": {
+                            "should": [
+                                {"prefix": {"title": search.query.lower()}},
+                                {"prefix": {"artist": search.query.lower()}},
+                                {"prefix": {"album": search.query.lower()}}
+                            ],
+                            "minimum_should_match": 1
+                        }
+                    }
+                ]
+            }
+        },
+        "size": search.limit
+    }
     
-    return songs_data
+    # Strategy 4: N-gram query for partial word matching
+    ngram_query = {
+        "query": {
+            "bool": {
+                "must": [
+                    {"term": {"download_status": "completed"}},
+                    {
+                        "bool": {
+                            "should": [
+                                {
+                                    "match": {
+                                        "title": {
+                                            "query": search.query,
+                                            "analyzer": "standard",
+                                            "minimum_should_match": "1"
+                                        }
+                                    }
+                                },
+                                {
+                                    "match": {
+                                        "artist": {
+                                            "query": search.query,
+                                            "analyzer": "standard",
+                                            "minimum_should_match": "1"
+                                        }
+                                    }
+                                },
+                                {
+                                    "match": {
+                                        "album": {
+                                            "query": search.query,
+                                            "analyzer": "standard",
+                                            "minimum_should_match": "1"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "size": search.limit
+    }
+    
+    # Execute all strategies and combine results
+    all_results = []
+    seen_spotify_ids = set()
+    
+    # Execute queries in order of precision (best results first)
+    queries = [
+        ("multi_match", multi_match_query),
+        ("prefix", prefix_query),
+        ("wildcard", wildcard_query),
+        ("ngram", ngram_query)
+    ]
+    
+    for strategy_name, query in queries:
+        try:
+            results = await es_service.search_raw(query)
+            for hit in results.get('hits', {}).get('hits', []):
+                song_doc = hit['_source']
+                spotify_id = song_doc.get("spotify_id")
+                
+                # Avoid duplicates
+                if spotify_id not in seen_spotify_ids:
+                    seen_spotify_ids.add(spotify_id)
+                    song_response = SongResponse(
+                        id=0,  # Use 0 for Elasticsearch results
+                        title=song_doc.get("title", ""),
+                        artist=song_doc.get("artist", ""),
+                        album=song_doc.get("album", ""),
+                        duration=song_doc.get("duration", 0),
+                        spotify_id=spotify_id,
+                        youtube_url=song_doc.get("youtube_url"),
+                        file_path=song_doc.get("file_path"),
+                        thumbnail_url=get_thumbnail_url(song_doc),
+                        download_status="completed",
+                        created_at=song_doc.get("created_at")
+                    )
+                    all_results.append(song_response)
+                    
+                    # Stop when we have enough results
+                    if len(all_results) >= search.limit:
+                        break
+        except Exception as e:
+            logger.warning(f"Search strategy '{strategy_name}' failed: {e}")
+            continue
+        
+        # Stop if we have enough results
+        if len(all_results) >= search.limit:
+            break
+    
+    return all_results[:search.limit]
 
 @router.get("/local/by-artist/{artist_name}", response_model=List[SongResponse])
 async def search_by_artist(
@@ -272,22 +401,36 @@ async def search_by_artist(
     limit: int = 10,
     current_user: User = Depends(get_current_user)
 ):
-    """Search downloaded songs by artist name using Elasticsearch"""
+    """Search downloaded songs by artist name with aggressive partial matching"""
     
     es_service = ElasticsearchService()
     
-    # Build Elasticsearch query for artist search
+    # Build Elasticsearch query for artist search with multiple strategies
     query = {
         "query": {
             "bool": {
                 "must": [
                     {"term": {"download_status": "completed"}},
                     {
-                        "match": {
-                            "artist": {
-                                "query": artist_name,
-                                "fuzziness": "AUTO"
-                            }
+                        "bool": {
+                            "should": [
+                                # Exact fuzzy match
+                                {
+                                    "match": {
+                                        "artist": {
+                                            "query": artist_name,
+                                            "fuzziness": SearchConfig.FUZZY_FUZZINESS,
+                                            "prefix_length": SearchConfig.FUZZY_PREFIX_LENGTH,
+                                            "max_expansions": SearchConfig.FUZZY_MAX_EXPANSIONS
+                                        }
+                                    }
+                                },
+                                # Wildcard match for partial queries
+                                {"wildcard": {"artist": f"*{artist_name.lower()}*"}},
+                                # Prefix match
+                                {"prefix": {"artist": artist_name.lower()}}
+                            ],
+                            "minimum_should_match": 1
                         }
                     }
                 ]
