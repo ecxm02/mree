@@ -28,7 +28,7 @@ class AppConstants {
   // Validation
   static const int minUsernameLength = 3;
   static const int maxUsernameLength = 50;
-  static const int minPasswordLength = 6;
+  static const int minPasswordLength = 8;
 
   // Storage Keys
   static const String serverIpKey = 'server_ip';

@@ -82,13 +82,16 @@ sudo rm -rf "$MUSIC_DOWNLOAD_PATH"/*
 
 # Database storage  
 echo "  🗑️  Clearing PostgreSQL data: $POSTGRES_DATA_PATH"
-sudo rm -rf "$POSTGRES_DATA_PATH"/*
+sudo rm -rf "$POSTGRES_DATA_PATH"
+sudo mkdir -p "$POSTGRES_DATA_PATH"
 
 echo "  🗑️  Clearing Elasticsearch data: $ELASTICSEARCH_DATA_PATH"
-sudo rm -rf "$ELASTICSEARCH_DATA_PATH"/*
+sudo rm -rf "$ELASTICSEARCH_DATA_PATH"
+sudo mkdir -p "$ELASTICSEARCH_DATA_PATH"
 
 echo "  🗑️  Clearing Redis data: $REDIS_DATA_PATH"
-sudo rm -rf "$REDIS_DATA_PATH"/*
+sudo rm -rf "$REDIS_DATA_PATH"
+sudo mkdir -p "$REDIS_DATA_PATH"
 
 # Backup storage
 echo "  🗑️  Clearing backup storage: $BACKUP_PATH"
@@ -102,6 +105,23 @@ create_directory() {
     local dir_path="$1"
     echo "  📁 Creating directory: $dir_path"
     sudo mkdir -p "$dir_path"
+    sudo chmod -R 755 "$dir_path"
+}
+
+# Function to create PostgreSQL directory with correct permissions
+create_postgres_directory() {
+    local dir_path="$1"
+    echo "  📁 Creating PostgreSQL directory: $dir_path"
+    sudo mkdir -p "$dir_path"
+    sudo chown -R 999:999 "$dir_path"
+    sudo chmod -R 755 "$dir_path"
+}
+
+# Function to create Elasticsearch directory with correct permissions
+create_elasticsearch_directory() {
+    local dir_path="$1"
+    echo "  📁 Creating Elasticsearch directory: $dir_path"
+    sudo mkdir -p "$dir_path"
     sudo chown -R 1000:1000 "$dir_path"
     sudo chmod -R 755 "$dir_path"
 }
@@ -110,8 +130,8 @@ create_directory() {
 create_directory "$MUSIC_STORAGE_PATH"
 create_directory "$IMAGE_STORAGE_PATH"
 create_directory "$MUSIC_DOWNLOAD_PATH"
-create_directory "$POSTGRES_DATA_PATH"
-create_directory "$ELASTICSEARCH_DATA_PATH"
+create_postgres_directory "$POSTGRES_DATA_PATH"
+create_elasticsearch_directory "$ELASTICSEARCH_DATA_PATH"
 create_directory "$REDIS_DATA_PATH"
 create_directory "$BACKUP_PATH"
 
