@@ -200,7 +200,7 @@ async def get_popular_songs(
     for hit in results.get('hits', {}).get('hits', []):
         song_doc = hit['_source']
         songs_data.append(SongResponse(
-            id=hit['_id'],  # Use Elasticsearch document ID
+            id=0,  # Use 0 for Elasticsearch results (no database ID yet)
             title=song_doc.get("title", ""),
             artist=song_doc.get("artist", ""),
             album=song_doc.get("album", ""),
@@ -251,7 +251,7 @@ async def search_local_songs(
     for hit in results.get('hits', {}).get('hits', []):
         song_doc = hit['_source']
         songs_data.append(SongResponse(
-            id=hit['_id'],  # Use Elasticsearch document ID
+            id=0,  # Use 0 for Elasticsearch results (no database ID yet)
             title=song_doc.get("title", ""),
             artist=song_doc.get("artist", ""),
             album=song_doc.get("album", ""),
@@ -302,7 +302,7 @@ async def search_by_artist(
     for hit in results.get('hits', {}).get('hits', []):
         song_doc = hit['_source']
         songs_data.append(SongResponse(
-            id=hit['_id'],  # Use Elasticsearch document ID
+            id=0,  # Use 0 for Elasticsearch results (no database ID yet)
             title=song_doc.get("title", ""),
             artist=song_doc.get("artist", ""),
             album=song_doc.get("album", ""),
