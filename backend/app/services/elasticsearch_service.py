@@ -72,15 +72,23 @@ class ElasticsearchService:
             return None
     
     async def search_songs(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """Search for songs in Elasticsearch"""
+        """Search for songs in Elasticsearch with aggressive partial matching"""
         try:
             search_body = {
                 "query": {
                     "multi_match": {
                         "query": query,
-                        "fields": ["title^2", "artist^1.5", "album"],
+                        "fields": [
+                            f"title^{SearchConfig.TITLE_BOOST}", 
+                            f"artist^{SearchConfig.ARTIST_BOOST}", 
+                            f"album^{SearchConfig.ALBUM_BOOST}"
+                        ],
                         "type": "best_fields",
-                        "fuzziness": "AUTO"
+                        "fuzziness": SearchConfig.FUZZY_FUZZINESS,
+                        "prefix_length": SearchConfig.FUZZY_PREFIX_LENGTH,
+                        "max_expansions": SearchConfig.FUZZY_MAX_EXPANSIONS,
+                        "minimum_should_match": SearchConfig.MINIMUM_SHOULD_MATCH,
+                        "tie_breaker": SearchConfig.TIE_BREAKER
                     }
                 },
                 "size": limit,
