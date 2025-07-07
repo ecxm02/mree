@@ -31,7 +31,7 @@ python-multipart==0.0.6
 
 # API integrations
 spotipy==2.23.0
-yt-dlp==2023.11.16
+yt-dlp>=2024.7.1
 
 # Audio processing
 pydub==0.25.1

@@ -181,7 +181,7 @@ class DownloadService:
                 return False
             
             ydl_opts = {
-                'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best[height<=480]',
+                'format': 'bestaudio/best',
                 'outtmpl': str(base_path) + '.%(ext)s',
                 'quiet': False,
                 'no_warnings': False,
@@ -190,16 +190,44 @@ class DownloadService:
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': AudioConfig.DEFAULT_FORMAT,
                     'preferredquality': str(settings.DEFAULT_AUDIO_QUALITY),
+                    'nopostoverwrites': False,
                 }],
                 'prefer_ffmpeg': True,
                 'keepvideo': False,
                 'extract_flat': False,
                 'writethumbnail': False,
                 'writeinfojson': False,
+                'writesubtitles': False,
+                'writeautomaticsub': False,
                 'ignoreerrors': False,
+                'no_check_certificate': True,
+                'extractor_args': {
+                    'youtube': {
+                        'skip': ['hls', 'dash'],
+                        'player_skip': ['configs'],
+                    }
+                },
             }
             
             logger.info(f"Starting download from {youtube_url} to {base_path}")
+            
+            # First, check what formats are actually available
+            try:
+                info_opts = {'quiet': True, 'no_warnings': True}
+                with yt_dlp.YoutubeDL(info_opts) as ydl:
+                    info = ydl.extract_info(youtube_url, download=False)
+                    if info and 'formats' in info:
+                        # Check if any actual audio/video formats are available
+                        has_audio = any(fmt.get('acodec', 'none') != 'none' for fmt in info['formats'])
+                        has_video = any(fmt.get('vcodec', 'none') != 'none' for fmt in info['formats'])
+                        
+                        if not has_audio and not has_video:
+                            logger.error(f"No audio or video formats available for {youtube_url}")
+                            return False
+                            
+                        logger.info(f"Available formats - Audio: {has_audio}, Video: {has_video}")
+            except Exception as e:
+                logger.warning(f"Could not check available formats: {e}")
             
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([youtube_url])
@@ -219,13 +247,21 @@ class DownloadService:
                     return True
                 
                 # Check for other formats that might need conversion
-                for ext in ['.m4a', '.webm', '.opus', '.wav', '.mhtml']:
+                for ext in ['.m4a', '.webm', '.opus', '.wav']:
                     potential_file = base_path.with_suffix(ext)
                     if potential_file.exists() and potential_file.stat().st_size > 0:
                         logger.info(f"Found {ext} file, moving to {file_path}")
                         shutil.move(str(potential_file), str(file_path))
                         logger.info(f"Download successful: {file_path} ({file_path.stat().st_size} bytes)")
                         return True
+                
+                # Check for problematic files that shouldn't be used as audio
+                for ext in ['.mhtml', '.html', '.xml', '.jpg', '.png', '.webp']:
+                    bad_file = base_path.with_suffix(ext)
+                    if bad_file.exists():
+                        file_size = bad_file.stat().st_size
+                        logger.error(f"Downloaded {ext} file instead of audio: {bad_file} ({file_size} bytes) - This is likely an image/metadata file, not audio")
+                        bad_file.unlink(missing_ok=True)  # Delete the bad file
             
             logger.error(f"No output file found after download. Expected: {file_path}")
             # List files in the directory to see what was created
