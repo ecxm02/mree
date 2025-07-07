@@ -181,22 +181,22 @@ class DownloadService:
                 return False
             
             ydl_opts = {
-                'format': 'bestaudio/best',
-                'extractaudio': True,
-                'audioformat': AudioConfig.DEFAULT_FORMAT,
-                'audioquality': str(settings.DEFAULT_AUDIO_QUALITY),
+                'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best[height<=480]',
                 'outtmpl': str(base_path) + '.%(ext)s',
-                'quiet': False,  # Enable logging to see what's happening
+                'quiet': False,
                 'no_warnings': False,
-                'verbose': True,  # Add verbose logging
+                'verbose': True,
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': AudioConfig.DEFAULT_FORMAT,
                     'preferredquality': str(settings.DEFAULT_AUDIO_QUALITY),
-                    'nopostoverwrites': False,
                 }],
                 'prefer_ffmpeg': True,
                 'keepvideo': False,
+                'extract_flat': False,
+                'writethumbnail': False,
+                'writeinfojson': False,
+                'ignoreerrors': False,
             }
             
             logger.info(f"Starting download from {youtube_url} to {base_path}")
