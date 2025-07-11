@@ -8,6 +8,8 @@ import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/auth/server_setup_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/player/player.dart';
+import '../features/debug/debug_info_screen.dart';
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -64,6 +66,8 @@ class _MyAppState extends State<MyApp> {
         '/register': (context) => const RegisterScreen(),
         '/main': (context) => const MainNavigation(),
         '/settings': (context) => const SettingsScreen(),
+        '/now-playing': (context) => const NowPlayingScreen(),
+        '/debug': (context) => const DebugInfoScreen(),
       },
     );
   }

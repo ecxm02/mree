@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../features/home/home_screen.dart';
-import '../features/search/search_screen.dart';
-import '../features/library/library_screen.dart';
-import '../features/settings/settings_screen.dart';
-import '../features/auth/auth_provider.dart';
+import 'features/home/home_screen.dart';
+import 'features/search/search_screen.dart';
+import 'features/library/library_screen.dart';
+import 'features/settings/settings_screen.dart';
+import 'features/auth/auth_provider.dart';
+import 'features/player/mini_player.dart';
+import 'core/services/audio_player_service.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -24,6 +26,9 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    final audioPlayer = context.watch<AudioPlayerService>();
+    final isPlayerActive = audioPlayer.currentSong != null;
+
     return Scaffold(
       appBar:
           _currentIndex == 0
@@ -37,7 +42,13 @@ class _MainNavigationState extends State<MainNavigation> {
                 ],
               )
               : null,
-      body: _screens[_currentIndex],
+      body: Column(
+        children: [
+          Expanded(child: _screens[_currentIndex]),
+          // Show mini player if a song is currently loaded
+          if (isPlayerActive) const MiniPlayer(),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -83,6 +94,14 @@ class _MainNavigationState extends State<MainNavigation> {
                       builder: (context) => const SettingsScreen(),
                     ),
                   );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.bug_report, color: Colors.red),
+                title: const Text('Audio Debug'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/audio-debug');
                 },
               ),
               ListTile(

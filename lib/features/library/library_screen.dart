@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/audio_player_service.dart';
 import '../../core/models/song.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -321,9 +323,26 @@ class _LibraryScreenState extends State<LibraryScreen> {
             Text(song.durationText, style: TextStyle(color: Colors.grey[600])),
           const SizedBox(width: 8),
           if (song.canPlay)
-            IconButton(
-              icon: const Icon(Icons.play_arrow),
-              onPressed: () => _playSong(song),
+            Consumer<AudioPlayerService>(
+              builder: (context, audioPlayer, child) {
+                final isCurrentSong = audioPlayer.isCurrentSong(song);
+                final isPlaying = audioPlayer.isSongPlaying(song);
+
+                return IconButton(
+                  icon: Icon(
+                    isCurrentSong && isPlaying ? Icons.pause : Icons.play_arrow,
+                  ),
+                  onPressed: () {
+                    if (isCurrentSong && isPlaying) {
+                      audioPlayer.pause();
+                    } else if (isCurrentSong) {
+                      audioPlayer.resume();
+                    } else {
+                      _playSong(song);
+                    }
+                  },
+                );
+              },
             )
           else if (song.isDownloading)
             const SizedBox(
@@ -348,14 +367,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   void _playSong(Song song) async {
     try {
-      if (song.spotifyId != null) {
-        await ApiService.instance.playSong(song.spotifyId!);
-        await ApiService.instance.markSongAsPlayed(song.spotifyId!);
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Playing ${song.title}')));
-        }
+      final audioPlayer = context.read<AudioPlayerService>();
+      await audioPlayer.playSong(song);
+
+      if (mounted) {
+        // Navigate to the player screen
+        Navigator.of(context).pushNamed('/now-playing');
       }
     } catch (e) {
       if (mounted) {
