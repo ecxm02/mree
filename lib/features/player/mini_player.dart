@@ -5,7 +5,7 @@ import '../../core/services/api_service.dart';
 import '../../core/models/song.dart';
 
 class MiniPlayer extends StatelessWidget {
-  const MiniPlayer({Key? key}) : super(key: key);
+  const MiniPlayer({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +24,7 @@ class MiniPlayer extends StatelessWidget {
           color: Theme.of(context).colorScheme.surfaceContainerHigh,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 4,
               offset: const Offset(0, -2),
             ),

@@ -5,7 +5,7 @@ import '../../core/services/api_service.dart';
 import '../../core/services/audio_player_service.dart';
 
 class DebugInfoScreen extends StatefulWidget {
-  const DebugInfoScreen({Key? key}) : super(key: key);
+  const DebugInfoScreen({super.key});
 
   @override
   State<DebugInfoScreen> createState() => _DebugInfoScreenState();

@@ -22,7 +22,7 @@ class AudioDebugService {
         await testPlayer.setUrl(url, headers: headers);
 
         // If successful, get duration
-        final duration = await testPlayer.duration;
+        final duration = testPlayer.duration;
 
         // Clean up
         await testPlayer.dispose();

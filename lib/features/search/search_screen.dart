@@ -402,15 +402,23 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _playSong(Song song) async {
+    debugPrint('🎵 Search screen: _playSong called for ${song.title}');
+    debugPrint('🆔 Spotify ID: ${song.spotifyId}');
+    debugPrint('🎵 Can play: ${song.canPlay}');
+    
     try {
       final audioPlayer = context.read<AudioPlayerService>();
+      debugPrint('🎵 Got audio player service, calling playSong...');
       await audioPlayer.playSong(song);
+      debugPrint('🎵 playSong completed, navigating to player...');
 
       if (mounted) {
         // Navigate to the player screen
         Navigator.of(context).pushNamed('/now-playing');
+        debugPrint('🎵 Navigation to now-playing completed');
       }
     } catch (e) {
+      debugPrint('❌ Search screen: playSong failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to play song: ${e.toString()}')),

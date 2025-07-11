@@ -5,7 +5,7 @@ import '../../core/services/audio_player_service.dart';
 import '../../core/services/api_service.dart';
 
 class NowPlayingScreen extends StatelessWidget {
-  const NowPlayingScreen({Key? key}) : super(key: key);
+  const NowPlayingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +46,7 @@ class NowPlayingScreen extends StatelessWidget {
                   ),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                    child: Container(color: Colors.black.withOpacity(0.6)),
+                    child: Container(color: Colors.black.withValues(alpha: 0.6)),
                   ),
                 ),
 
@@ -66,7 +66,7 @@ class NowPlayingScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
+                              color: Colors.black.withValues(alpha: 0.3),
                               blurRadius: 20,
                               spreadRadius: 5,
                             ),
@@ -124,7 +124,7 @@ class NowPlayingScreen extends StatelessWidget {
                           thumbColor: Theme.of(context).colorScheme.primary,
                           activeTrackColor:
                               Theme.of(context).colorScheme.primary,
-                          inactiveTrackColor: Colors.grey.withOpacity(0.3),
+                          inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
                           trackHeight: 4.0,
                         ),
                         child: Slider(
@@ -208,6 +208,16 @@ class NowPlayingScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              // Show loading overlay when buffering
+              if (player.isLoading)
+                Container(
+                  color: Colors.black54,
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  ),
+                ),
             ],
           ),
         );

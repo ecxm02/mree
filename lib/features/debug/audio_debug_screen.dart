@@ -80,6 +80,10 @@ class _AudioDebugScreenState extends State<AudioDebugScreen> {
                   child: const Text('Play First Song'),
                 ),
                 ElevatedButton(
+                  onPressed: _isLoading ? null : _testStreamingConnectivity,
+                  child: const Text('Test Streaming'),
+                ),
+                ElevatedButton(
                   onPressed: _clearDebugOutput,
                   child: const Text('Clear Log'),
                 ),
@@ -177,6 +181,36 @@ class _AudioDebugScreenState extends State<AudioDebugScreen> {
     if (result == true) {
       _addDebugLine('✅ Login completed successfully');
     }
+  }
+
+  Future<void> _testStreamingConnectivity() async {
+    setState(() => _isLoading = true);
+    _addDebugLine('🔍 Testing streaming connectivity...');
+    
+    try {
+      final library = await ApiService.instance.getLibrary();
+      if (library.isEmpty) {
+        _addDebugLine('❌ No songs in library to test');
+        return;
+      }
+      
+      final firstSong = library.first;
+      if (firstSong.spotifyId == null) {
+        _addDebugLine('❌ First song has no Spotify ID');
+        return;
+      }
+      
+      _addDebugLine('🎵 Testing connectivity for: ${firstSong.title}');
+      
+      final audioPlayer = context.read<AudioPlayerService>();
+      await audioPlayer.testStreamingEndpoint(firstSong.spotifyId!);
+      
+      _addDebugLine('✅ Streaming connectivity test completed - check debug console for details');
+    } catch (e) {
+      _addDebugLine('❌ Streaming connectivity test failed: $e');
+    }
+    
+    setState(() => _isLoading = false);
   }
 
   void _clearDebugOutput() {
