@@ -22,6 +22,10 @@ class ApiService {
         connectTimeout: AppConstants.defaultTimeout,
         receiveTimeout: AppConstants.defaultTimeout,
         headers: {'Content-Type': 'application/json'},
+        validateStatus:
+            (status) =>
+                status != null &&
+                status < 500, // Accept all responses except 500+ errors
       ),
     );
 
@@ -156,6 +160,10 @@ class ApiService {
   Future<bool> isAuthenticated() async {
     final token = await _getStoredToken();
     return token != null;
+  }
+
+  Future<String?> getStoredToken() async {
+    return _getStoredToken();
   }
 
   // Helper method to build full image URL

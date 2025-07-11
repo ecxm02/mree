@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import '../../core/services/api_service.dart';
+import '../../core/services/audio_player_service.dart';
 import '../../core/models/song.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -347,9 +349,26 @@ class _SearchScreenState extends State<SearchScreen> {
             Text(song.durationText, style: TextStyle(color: Colors.grey[600])),
           const SizedBox(width: 8),
           if (isLocal && song.canPlay)
-            IconButton(
-              icon: const Icon(Icons.play_arrow),
-              onPressed: () => _playSong(song),
+            Consumer<AudioPlayerService>(
+              builder: (context, audioPlayer, child) {
+                final isCurrentSong = audioPlayer.isCurrentSong(song);
+                final isPlaying = audioPlayer.isSongPlaying(song);
+
+                return IconButton(
+                  icon: Icon(
+                    isCurrentSong && isPlaying ? Icons.pause : Icons.play_arrow,
+                  ),
+                  onPressed: () {
+                    if (isCurrentSong && isPlaying) {
+                      audioPlayer.pause();
+                    } else if (isCurrentSong) {
+                      audioPlayer.resume();
+                    } else {
+                      _playSong(song);
+                    }
+                  },
+                );
+              },
             )
           else if (isLocal && song.isDownloading)
             const SizedBox(
@@ -383,16 +402,23 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _playSong(Song song) async {
+    debugPrint('🎵 Search screen: _playSong called for ${song.title}');
+    debugPrint('🆔 Spotify ID: ${song.spotifyId}');
+    debugPrint('🎵 Can play: ${song.canPlay}');
+    
     try {
-      if (song.spotifyId != null) {
-        await ApiService.instance.playSong(song.spotifyId!);
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Playing ${song.title}')));
-        }
+      final audioPlayer = context.read<AudioPlayerService>();
+      debugPrint('🎵 Got audio player service, calling playSong...');
+      await audioPlayer.playSong(song);
+      debugPrint('🎵 playSong completed, navigating to player...');
+
+      if (mounted) {
+        // Navigate to the player screen
+        Navigator.of(context).pushNamed('/now-playing');
+        debugPrint('🎵 Navigation to now-playing completed');
       }
     } catch (e) {
+      debugPrint('❌ Search screen: playSong failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to play song: ${e.toString()}')),
