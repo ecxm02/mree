@@ -43,7 +43,9 @@ void main() async {
           final testSong = library.first;
           final spotifyId = testSong['spotify_id'];
 
-          print('\n🎵 Testing song: ${testSong['title']} by ${testSong['artist']}');
+          print(
+            '\n🎵 Testing song: ${testSong['title']} by ${testSong['artist']}',
+          );
           print('🆔 Spotify ID: $spotifyId');
 
           // Step 3: Test streaming with just_audio compatible headers
@@ -53,10 +55,13 @@ void main() async {
           );
           request.headers.set('Authorization', 'Bearer $token');
           request.headers.set('Accept', 'audio/*');
-          
+
           // Add headers that just_audio might use
           request.headers.set('User-Agent', 'just_audio');
-          request.headers.set('Range', 'bytes=0-'); // just_audio often uses range requests
+          request.headers.set(
+            'Range',
+            'bytes=0-',
+          ); // just_audio often uses range requests
 
           response = await request.close();
 
@@ -70,7 +75,10 @@ void main() async {
 
             // Test if we can read the stream like just_audio would
             final bytes = await response.take(1000).toList();
-            final totalBytes = bytes.fold<int>(0, (sum, chunk) => sum + chunk.length);
+            final totalBytes = bytes.fold<int>(
+              0,
+              (sum, chunk) => sum + chunk.length,
+            );
             print('📊 Successfully read $totalBytes bytes from stream');
 
             // Check if it's valid audio data
@@ -81,28 +89,30 @@ void main() async {
                 if (header == 'ID3' || firstBytes[0] == 0xFF) {
                   print('✅ Valid MP3 audio data detected!');
                 } else {
-                  print('⚠️ Audio data format: ${firstBytes.take(10).toList()}');
+                  print(
+                    '⚠️ Audio data format: ${firstBytes.take(10).toList()}',
+                  );
                 }
               }
             }
 
             // Step 4: Test if just_audio package can actually load this URL
             print('\n🎵 Testing URL format for just_audio compatibility...');
-            final streamUrl = 'http://100.67.83.60:8000/api/stream/play/$spotifyId';
+            final streamUrl =
+                'http://100.67.83.60:8000/api/stream/play/$spotifyId';
             print('📎 Stream URL: $streamUrl');
-            
+
             // Test if the URL is accessible without auth (should fail)
             print('\n🔒 Testing access without auth (should fail)...');
             request = await client.getUrl(Uri.parse(streamUrl));
             response = await request.close();
             print('📊 No-auth response: ${response.statusCode}');
-            
+
             if (response.statusCode == 403) {
               print('✅ Authentication is properly enforced');
             } else {
               print('⚠️ Unexpected response without auth');
             }
-
           } else {
             final errorBody = await response.transform(utf8.decoder).join();
             print('❌ Streaming failed: ${response.statusCode}');

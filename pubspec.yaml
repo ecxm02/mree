@@ -55,7 +55,7 @@ dependencies:
   shared_preferences: ^2.2.2
   
   # Audio player
-  just_audio: ^0.9.36
+  just_audio: ^0.9.46
   
   # Media controls
   audio_service: ^0.18.12

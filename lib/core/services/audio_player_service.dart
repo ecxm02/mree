@@ -77,7 +77,7 @@ class AudioPlayerService extends ChangeNotifier {
       onError: (Object e, StackTrace stackTrace) {
         debugPrint('❌ A playback error occurred: $e');
         debugPrint('❌ Stack trace: $stackTrace');
-        
+
         // Update loading state on error
         if (_isLoading) {
           _isLoading = false;
@@ -85,7 +85,7 @@ class AudioPlayerService extends ChangeNotifier {
         }
       },
     );
-    
+
     // Listen for additional errors from the player itself
     _audioPlayer.processingStateStream.listen((state) {
       debugPrint('🎵 Processing state changed to: $state');
@@ -104,7 +104,7 @@ class AudioPlayerService extends ChangeNotifier {
     try {
       debugPrint('🎵 Starting playSong for: ${song.title} by ${song.artist}');
       debugPrint('🆔 Spotify ID: ${song.spotifyId}');
-      
+
       _isLoading = true;
       _currentSong = song;
       notifyListeners();
@@ -126,9 +126,12 @@ class AudioPlayerService extends ChangeNotifier {
       // First check if the URL is accessible
       debugPrint('🔍 Setting audio URL...');
       try {
-        final loadedDuration = await _audioPlayer.setUrl(streamUrl, headers: headers);
+        final loadedDuration = await _audioPlayer.setUrl(
+          streamUrl,
+          headers: headers,
+        );
         debugPrint('✅ URL set successfully, loaded duration: $loadedDuration');
-        
+
         if (loadedDuration == null) {
           debugPrint('⚠️ Warning: Loaded duration is null, but URL was set');
         }
@@ -137,15 +140,19 @@ class AudioPlayerService extends ChangeNotifier {
         debugPrint('❌ Error type: ${setUrlError.runtimeType}');
         throw Exception('Failed to load audio stream: $setUrlError');
       }
-      
+
       // Wait for the player to be ready
       debugPrint('🔍 Waiting for player to be ready...');
-      await Future.delayed(const Duration(milliseconds: 500)); // Give some time for buffering
-      
+      await Future.delayed(
+        const Duration(milliseconds: 500),
+      ); // Give some time for buffering
+
       // Check player state before playing
       final playerState = _audioPlayer.playerState;
-      debugPrint('🎵 Player state before play: ${playerState.playing}, ${playerState.processingState}');
-      
+      debugPrint(
+        '🎵 Player state before play: ${playerState.playing}, ${playerState.processingState}',
+      );
+
       // Start playback
       debugPrint('▶️ Starting playback...');
       try {
@@ -155,11 +162,13 @@ class AudioPlayerService extends ChangeNotifier {
         debugPrint('❌ Failed to start playback: $playError');
         throw Exception('Failed to start playback: $playError');
       }
-      
+
       // Check player state after playing
       await Future.delayed(const Duration(milliseconds: 200));
       final playerStateAfter = _audioPlayer.playerState;
-      debugPrint('🎵 Player state after play: ${playerStateAfter.playing}, ${playerStateAfter.processingState}');
+      debugPrint(
+        '🎵 Player state after play: ${playerStateAfter.playing}, ${playerStateAfter.processingState}',
+      );
 
       // Mark as played in background
       try {
@@ -219,43 +228,45 @@ class AudioPlayerService extends ChangeNotifier {
   Future<void> testStreamingEndpoint(String spotifyId) async {
     try {
       debugPrint('🔍 Testing HTTP connectivity to streaming endpoint...');
-      
+
       final serverUrl = await ServerConfigService.instance.getServerUrl();
       if (serverUrl == null) {
         debugPrint('❌ Server URL not configured');
         return;
       }
-      
+
       final streamUrl = '$serverUrl/api/stream/play/$spotifyId';
       debugPrint('🌐 Testing URL: $streamUrl');
-      
+
       // Test with simple HTTP client first
       final client = HttpClient();
       try {
         final uri = Uri.parse(streamUrl);
         final request = await client.getUrl(uri);
-        
+
         // Add headers
         final headers = await _buildAuthHeaders();
         headers.forEach((key, value) {
           request.headers.set(key, value);
         });
-        
+
         final response = await request.close();
         debugPrint('✅ HTTP test successful!');
         debugPrint('📊 Status: ${response.statusCode}');
         debugPrint('📊 Headers: ${response.headers}');
-        
+
         if (response.statusCode == 200) {
           // Read first few bytes
           final bytes = await response.take(100).toList();
-          final totalBytes = bytes.fold<int>(0, (sum, chunk) => sum + chunk.length);
+          final totalBytes = bytes.fold<int>(
+            0,
+            (sum, chunk) => sum + chunk.length,
+          );
           debugPrint('📊 First $totalBytes bytes received');
         } else {
           final errorBody = await response.transform(utf8.decoder).join();
           debugPrint('❌ HTTP error response: $errorBody');
         }
-        
       } catch (httpError) {
         debugPrint('❌ HTTP test failed: $httpError');
       } finally {

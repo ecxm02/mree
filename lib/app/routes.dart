@@ -31,7 +31,9 @@ class AppRoutes {
       case library:
         return MaterialPageRoute(builder: (context) => const LibraryScreen());
       case audioDebug:
-        return MaterialPageRoute(builder: (context) => const AudioDebugScreen());
+        return MaterialPageRoute(
+          builder: (context) => const AudioDebugScreen(),
+        );
       default:
         return MaterialPageRoute(
           builder:

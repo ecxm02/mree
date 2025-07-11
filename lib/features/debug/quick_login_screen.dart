@@ -56,16 +56,19 @@ class _QuickLoginScreenState extends State<QuickLoginScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _login,
-                        child: _isLoading
-                            ? const CircularProgressIndicator()
-                            : const Text('Login'),
+                        child:
+                            _isLoading
+                                ? const CircularProgressIndicator()
+                                : const Text('Login'),
                       ),
                     ),
                     if (_error != null) ...[
                       const SizedBox(height: 8),
                       Text(
                         _error!,
-                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     ],
                   ],
@@ -91,7 +94,10 @@ class _QuickLoginScreenState extends State<QuickLoginScreen> {
 
     try {
       // Ensure server is configured
-      await ServerConfigService.instance.setServerConfig('100.67.83.60', port: '8000');
+      await ServerConfigService.instance.setServerConfig(
+        '100.67.83.60',
+        port: '8000',
+      );
       await ApiService.instance.updateBaseUrl();
 
       // Attempt login
@@ -105,9 +111,9 @@ class _QuickLoginScreenState extends State<QuickLoginScreen> {
       // If successful, navigate back
       if (mounted) {
         Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login successful!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Login successful!')));
       }
     } catch (e) {
       setState(() {
@@ -121,9 +127,12 @@ class _QuickLoginScreenState extends State<QuickLoginScreen> {
   }
 
   Future<void> _configureServer() async {
-    await ServerConfigService.instance.setServerConfig('100.67.83.60', port: '8000');
+    await ServerConfigService.instance.setServerConfig(
+      '100.67.83.60',
+      port: '8000',
+    );
     await ApiService.instance.updateBaseUrl();
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Server configured to 100.67.83.60:8000')),

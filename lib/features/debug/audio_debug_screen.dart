@@ -24,7 +24,7 @@ class _AudioDebugScreenState extends State<AudioDebugScreen> {
   @override
   Widget build(BuildContext context) {
     final audioPlayer = context.watch<AudioPlayerService>();
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Audio Debug'),
@@ -49,7 +49,9 @@ class _AudioDebugScreenState extends State<AudioDebugScreen> {
                     const SizedBox(height: 8),
                     Text('Is Playing: ${audioPlayer.isPlaying}'),
                     Text('Is Loading: ${audioPlayer.isLoading}'),
-                    Text('Current Song: ${audioPlayer.currentSong?.title ?? 'None'}'),
+                    Text(
+                      'Current Song: ${audioPlayer.currentSong?.title ?? 'None'}',
+                    ),
                     Text('Position: ${audioPlayer.position.toString()}'),
                     Text('Duration: ${audioPlayer.duration.toString()}'),
                   ],
@@ -57,7 +59,7 @@ class _AudioDebugScreenState extends State<AudioDebugScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Test buttons
             Wrap(
               spacing: 8,
@@ -90,7 +92,7 @@ class _AudioDebugScreenState extends State<AudioDebugScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Debug output
             Expanded(
               child: Card(
@@ -98,10 +100,12 @@ class _AudioDebugScreenState extends State<AudioDebugScreen> {
                   padding: const EdgeInsets.all(8),
                   child: SingleChildScrollView(
                     child: Text(
-                      _debugOutput.isEmpty ? 'No debug output yet' : _debugOutput,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontFamily: 'monospace',
-                      ),
+                      _debugOutput.isEmpty
+                          ? 'No debug output yet'
+                          : _debugOutput,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
                     ),
                   ),
                 ),
@@ -116,59 +120,65 @@ class _AudioDebugScreenState extends State<AudioDebugScreen> {
   Future<void> _testConnectivity() async {
     setState(() => _isLoading = true);
     _addDebugLine('🔍 Starting connectivity test...');
-    
+
     try {
       final audioPlayer = context.read<AudioPlayerService>();
       await audioPlayer.testConnectivity();
-      _addDebugLine('✅ Connectivity test completed - check debug console for details');
+      _addDebugLine(
+        '✅ Connectivity test completed - check debug console for details',
+      );
     } catch (e) {
       _addDebugLine('❌ Connectivity test failed: $e');
     }
-    
+
     setState(() => _isLoading = false);
   }
 
   Future<void> _testLibrary() async {
     setState(() => _isLoading = true);
     _addDebugLine('📚 Testing library access...');
-    
+
     try {
       final library = await ApiService.instance.getLibrary();
       _addDebugLine('✅ Library loaded: ${library.length} songs');
-      
+
       for (int i = 0; i < library.length && i < 3; i++) {
         final song = library[i];
-        _addDebugLine('  Song $i: ${song.title} by ${song.artist} (${song.spotifyId})');
+        _addDebugLine(
+          '  Song $i: ${song.title} by ${song.artist} (${song.spotifyId})',
+        );
       }
     } catch (e) {
       _addDebugLine('❌ Library test failed: $e');
     }
-    
+
     setState(() => _isLoading = false);
   }
 
   Future<void> _testPlayFirstSong() async {
     setState(() => _isLoading = true);
     _addDebugLine('🎵 Testing play first song...');
-    
+
     try {
       final library = await ApiService.instance.getLibrary();
       if (library.isEmpty) {
         _addDebugLine('❌ No songs in library to play');
         return;
       }
-      
+
       final firstSong = library.first;
       _addDebugLine('🎵 Attempting to play: ${firstSong.title}');
-      
+
       final audioPlayer = context.read<AudioPlayerService>();
       await audioPlayer.playSong(firstSong);
-      
-      _addDebugLine('✅ Play command completed - check debug console and audio player status');
+
+      _addDebugLine(
+        '✅ Play command completed - check debug console and audio player status',
+      );
     } catch (e) {
       _addDebugLine('❌ Play test failed: $e');
     }
-    
+
     setState(() => _isLoading = false);
   }
 
@@ -177,7 +187,7 @@ class _AudioDebugScreenState extends State<AudioDebugScreen> {
       context,
       MaterialPageRoute(builder: (context) => const QuickLoginScreen()),
     );
-    
+
     if (result == true) {
       _addDebugLine('✅ Login completed successfully');
     }
@@ -186,30 +196,32 @@ class _AudioDebugScreenState extends State<AudioDebugScreen> {
   Future<void> _testStreamingConnectivity() async {
     setState(() => _isLoading = true);
     _addDebugLine('🔍 Testing streaming connectivity...');
-    
+
     try {
       final library = await ApiService.instance.getLibrary();
       if (library.isEmpty) {
         _addDebugLine('❌ No songs in library to test');
         return;
       }
-      
+
       final firstSong = library.first;
       if (firstSong.spotifyId == null) {
         _addDebugLine('❌ First song has no Spotify ID');
         return;
       }
-      
+
       _addDebugLine('🎵 Testing connectivity for: ${firstSong.title}');
-      
+
       final audioPlayer = context.read<AudioPlayerService>();
       await audioPlayer.testStreamingEndpoint(firstSong.spotifyId!);
-      
-      _addDebugLine('✅ Streaming connectivity test completed - check debug console for details');
+
+      _addDebugLine(
+        '✅ Streaming connectivity test completed - check debug console for details',
+      );
     } catch (e) {
       _addDebugLine('❌ Streaming connectivity test failed: $e');
     }
-    
+
     setState(() => _isLoading = false);
   }
 

@@ -405,7 +405,7 @@ class _SearchScreenState extends State<SearchScreen> {
     debugPrint('🎵 Search screen: _playSong called for ${song.title}');
     debugPrint('🆔 Spotify ID: ${song.spotifyId}');
     debugPrint('🎵 Can play: ${song.canPlay}');
-    
+
     try {
       final audioPlayer = context.read<AudioPlayerService>();
       debugPrint('🎵 Got audio player service, calling playSong...');

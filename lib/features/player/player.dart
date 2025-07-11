@@ -46,7 +46,9 @@ class NowPlayingScreen extends StatelessWidget {
                   ),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                    child: Container(color: Colors.black.withValues(alpha: 0.6)),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.6),
+                    ),
                   ),
                 ),
 
@@ -124,7 +126,9 @@ class NowPlayingScreen extends StatelessWidget {
                           thumbColor: Theme.of(context).colorScheme.primary,
                           activeTrackColor:
                               Theme.of(context).colorScheme.primary,
-                          inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
+                          inactiveTrackColor: Colors.grey.withValues(
+                            alpha: 0.3,
+                          ),
                           trackHeight: 4.0,
                         ),
                         child: Slider(
