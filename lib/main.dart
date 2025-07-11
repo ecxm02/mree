@@ -5,6 +5,7 @@ import 'features/auth/auth_provider.dart';
 import 'core/services/audio_player_service.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(
     MultiProvider(
       providers: [
