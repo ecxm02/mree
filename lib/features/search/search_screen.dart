@@ -13,6 +13,8 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
+  // Track Spotify downloads in progress
+  final Set<String> _downloadingSpotifyIds = {};
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   bool _isLoading = false;
@@ -176,13 +178,15 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _downloadSpotifySong(String spotifyId) async {
+    setState(() {
+      _downloadingSpotifyIds.add(spotifyId);
+    });
     try {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Starting download...')));
 
       final response = await ApiService.instance.downloadSong(spotifyId);
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -191,7 +195,6 @@ class _SearchScreenState extends State<SearchScreen> {
                 response.status == 'queued' ? Colors.green : Colors.orange,
           ),
         );
-
         // Refresh local search if download was queued
         if (response.status == 'queued' && _currentQuery.isNotEmpty) {
           _performLocalSearch(_currentQuery);
@@ -205,11 +208,19 @@ class _SearchScreenState extends State<SearchScreen> {
             backgroundColor: Colors.red,
           ),
         );
+        // Remove from downloading set on error
+        setState(() {
+          _downloadingSpotifyIds.remove(spotifyId);
+        });
       }
     }
   }
 
   Widget _buildSearchResults() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -294,6 +305,10 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildSongTile(Song song, {required bool isLocal}) {
+    final isSpotifyDownloading =
+        !isLocal &&
+        song.spotifyId != null &&
+        _downloadingSpotifyIds.contains(song.spotifyId);
     return ListTile(
       leading: Container(
         width: 56,
@@ -353,7 +368,6 @@ class _SearchScreenState extends State<SearchScreen> {
               builder: (context, audioPlayer, child) {
                 final isCurrentSong = audioPlayer.isCurrentSong(song);
                 final isPlaying = audioPlayer.isSongPlaying(song);
-
                 return IconButton(
                   icon: Icon(
                     isCurrentSong && isPlaying ? Icons.pause : Icons.play_arrow,
@@ -376,11 +390,18 @@ class _SearchScreenState extends State<SearchScreen> {
               height: 24,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
+          else if (isSpotifyDownloading)
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
           else if (!isLocal)
             IconButton(
               icon: const Icon(Icons.download),
               onPressed:
-                  song.spotifyId != null
+                  song.spotifyId != null &&
+                          !_downloadingSpotifyIds.contains(song.spotifyId)
                       ? () => _downloadSpotifySong(song.spotifyId!)
                       : null,
             )
