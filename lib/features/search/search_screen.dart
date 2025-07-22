@@ -129,9 +129,19 @@ class _SearchScreenState extends State<SearchScreen> {
       final results = await ApiService.instance.searchLocal(searchRequest);
 
       if (mounted) {
+        // Remove any downloading IDs that are now present in local results
+        final downloadingIdsToRemove = <String>[];
+        for (final id in _downloadingSpotifyIds) {
+          if (results.any((song) => song.spotifyId == id)) {
+            downloadingIdsToRemove.add(id);
+          }
+        }
         setState(() {
           _localResults = results;
           _isLoading = false;
+          for (final id in downloadingIdsToRemove) {
+            _downloadingSpotifyIds.remove(id);
+          }
         });
       }
     } catch (e) {
