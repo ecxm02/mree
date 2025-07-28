@@ -235,6 +235,25 @@ class _SearchScreenState extends State<SearchScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    // Build a set of local spotifyIds for deduplication
+    final localSpotifyIds =
+        _localResults
+            .where((song) => song.spotifyId != null)
+            .map((song) => song.spotifyId)
+            .toSet();
+
+    // Filter Spotify results to exclude any with a spotifyId already in local results
+    final dedupedSpotifyResults =
+        _spotifyResults != null
+            ? _spotifyResults!.results
+                .where(
+                  (song) =>
+                      song.spotifyId == null ||
+                      !localSpotifyIds.contains(song.spotifyId),
+                )
+                .toList()
+            : <Song>[];
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -261,9 +280,8 @@ class _SearchScreenState extends State<SearchScreen> {
             const SizedBox(height: 24),
           ],
 
-          // Spotify results section
-          if (_spotifyResults != null &&
-              _spotifyResults!.results.isNotEmpty) ...[
+          // Spotify results section (deduplicated)
+          if (_spotifyResults != null && dedupedSpotifyResults.isNotEmpty) ...[
             Text(
               'From Spotify (${_spotifyResults!.total} results)',
               style: Theme.of(
@@ -274,9 +292,9 @@ class _SearchScreenState extends State<SearchScreen> {
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: _spotifyResults!.results.length,
+              itemCount: dedupedSpotifyResults.length,
               itemBuilder: (context, index) {
-                final song = _spotifyResults!.results[index];
+                final song = dedupedSpotifyResults[index];
                 return _buildSongTile(song, isLocal: false);
               },
             ),
@@ -284,8 +302,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
           // No results message
           if (_localResults.isEmpty &&
-              (_spotifyResults == null ||
-                  _spotifyResults!.results.isEmpty)) ...[
+              (_spotifyResults == null || dedupedSpotifyResults.isEmpty)) ...[
             const SizedBox(height: 48),
             Center(
               child: Column(
