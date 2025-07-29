@@ -123,9 +123,8 @@ class NowPlayingScreen extends StatelessWidget {
                       // Position Slider
                       SliderTheme(
                         data: SliderTheme.of(context).copyWith(
-                          thumbColor: Theme.of(context).colorScheme.primary,
-                          activeTrackColor:
-                              Theme.of(context).colorScheme.primary,
+                          thumbColor: Colors.white,
+                          activeTrackColor: Colors.white,
                           inactiveTrackColor: Colors.grey.withValues(
                             alpha: 0.3,
                           ),
