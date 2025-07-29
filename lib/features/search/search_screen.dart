@@ -18,7 +18,6 @@ class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   bool _isLoading = false;
-  bool _searchingSpotify = false;
   List<Song> _localResults = [];
   SearchResponse? _spotifyResults;
   String _currentQuery = '';
@@ -32,77 +31,47 @@ class _SearchScreenState extends State<SearchScreen> {
           // Search bar
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'What do you want to listen to?',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon:
-                        _searchController.text.isNotEmpty
-                            ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                setState(() {
-                                  _searchController.clear();
-                                  _isSearching = false;
-                                  _localResults = [];
-                                  _spotifyResults = null;
-                                  _currentQuery = '';
-                                });
-                              },
-                            )
-                            : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _isSearching = value.isNotEmpty;
-                      if (value.isNotEmpty) {
-                        _performLocalSearch(value);
-                      } else {
-                        _localResults = [];
-                        _spotifyResults = null;
-                        _currentQuery = '';
-                      }
-                    });
-                  },
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'What do you want to listen to?',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon:
+                    _searchController.text.isNotEmpty
+                        ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            setState(() {
+                              _searchController.clear();
+                              _isSearching = false;
+                              _localResults = [];
+                              _spotifyResults = null;
+                              _currentQuery = '';
+                            });
+                          },
+                        )
+                        : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
                 ),
-                if (_isSearching && _currentQuery.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed:
-                          _searchingSpotify
-                              ? null
-                              : () => _performSpotifySearch(_currentQuery),
-                      icon:
-                          _searchingSpotify
-                              ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                              : const Icon(Icons.cloud_download),
-                      label: Text(
-                        _searchingSpotify
-                            ? 'Searching Spotify...'
-                            : 'Search Spotify',
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+                filled: true,
+                fillColor:
+                    Theme.of(context).colorScheme.surfaceContainerHighest,
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _isSearching = value.isNotEmpty;
+                  if (value.isNotEmpty) {
+                    _performLocalSearch(value);
+                    _performSpotifySearch(value);
+                  } else {
+                    _localResults = [];
+                    _spotifyResults = null;
+                    _currentQuery = '';
+                  }
+                });
+              },
             ),
           ),
 
@@ -160,10 +129,6 @@ class _SearchScreenState extends State<SearchScreen> {
   void _performSpotifySearch(String query) async {
     if (query.trim().isEmpty) return;
 
-    setState(() {
-      _searchingSpotify = true;
-    });
-
     try {
       final searchRequest = SearchRequest(query: query.trim());
       final results = await ApiService.instance.searchSpotify(searchRequest);
@@ -171,14 +136,12 @@ class _SearchScreenState extends State<SearchScreen> {
       if (mounted) {
         setState(() {
           _spotifyResults = results;
-          _searchingSpotify = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _spotifyResults = null;
-          _searchingSpotify = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Spotify search failed: ${e.toString()}')),
