@@ -17,10 +17,7 @@ class MiniPlayer extends StatelessWidget {
     }
 
     final Duration position = player.position;
-    final Duration duration =
-        song.duration != null
-            ? Duration(seconds: song.duration!)
-            : Duration.zero;
+    final Duration duration = player.duration;
     final double progress =
         (duration.inMilliseconds > 0)
             ? (position.inMilliseconds / duration.inMilliseconds).clamp(
@@ -75,6 +72,21 @@ class MiniPlayer extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
+                    ),
+                  ),
+                ),
+
+                // Time display
+                Padding(
+                  padding: const EdgeInsets.only(right: 4.0),
+                  child: Text(
+                    _formatDuration(position) +
+                        ' / ' +
+                        _formatDuration(duration),
+                    style: TextStyle(
+                      color: Colors.grey[300],
+                      fontSize: 12,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
                 ),
@@ -143,5 +155,11 @@ class MiniPlayer extends StatelessWidget {
         },
       ),
     );
+  }
+
+  String _formatDuration(Duration d) {
+    final minutes = d.inMinutes;
+    final seconds = d.inSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 }
