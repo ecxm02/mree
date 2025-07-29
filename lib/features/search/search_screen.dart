@@ -353,53 +353,61 @@ class _SearchScreenState extends State<SearchScreen> {
           if (song.duration != null)
             Text(song.durationText, style: TextStyle(color: Colors.grey[600])),
           const SizedBox(width: 8),
-          if (isLocal && song.canPlay)
-            Consumer<AudioPlayerService>(
-              builder: (context, audioPlayer, child) {
-                final isCurrentSong = audioPlayer.isCurrentSong(song);
-                final isPlaying = audioPlayer.isSongPlaying(song);
-                return IconButton(
-                  icon: Icon(
-                    isCurrentSong && isPlaying ? Icons.pause : Icons.play_arrow,
-                  ),
-                  onPressed: () {
-                    if (isCurrentSong && isPlaying) {
-                      audioPlayer.pause();
-                    } else if (isCurrentSong) {
-                      audioPlayer.resume();
-                    } else {
-                      _playSong(song);
-                    }
-                  },
-                );
-              },
-            )
-          else if (isLocal && song.isDownloading)
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else if (isSpotifyDownloading)
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else if (!isLocal)
-            IconButton(
-              icon: const Icon(Icons.download),
-              onPressed:
-                  song.spotifyId != null &&
-                          !_downloadingSpotifyIds.contains(song.spotifyId)
-                      ? () => _downloadSpotifySong(song.spotifyId!)
-                      : null,
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.more_vert),
-              onPressed: () => _showSongOptions(song),
-            ),
+          Container(
+            width: 40, // Match IconButton's width
+            alignment: Alignment.center,
+            child:
+                (isLocal && song.canPlay
+                    ? Consumer<AudioPlayerService>(
+                      builder: (context, audioPlayer, child) {
+                        final isCurrentSong = audioPlayer.isCurrentSong(song);
+                        final isPlaying = audioPlayer.isSongPlaying(song);
+                        return IconButton(
+                          icon: Icon(
+                            isCurrentSong && isPlaying
+                                ? Icons.pause
+                                : Icons.play_arrow,
+                          ),
+                          onPressed: () {
+                            if (isCurrentSong && isPlaying) {
+                              audioPlayer.pause();
+                            } else if (isCurrentSong) {
+                              audioPlayer.resume();
+                            } else {
+                              _playSong(song);
+                            }
+                          },
+                        );
+                      },
+                    )
+                    : isLocal && song.isDownloading
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : isSpotifyDownloading
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : !isLocal
+                    ? IconButton(
+                      icon: const Icon(Icons.download),
+                      onPressed:
+                          song.spotifyId != null &&
+                                  !_downloadingSpotifyIds.contains(
+                                    song.spotifyId,
+                                  )
+                              ? () => _downloadSpotifySong(song.spotifyId!)
+                              : null,
+                    )
+                    : IconButton(
+                      icon: const Icon(Icons.more_vert),
+                      onPressed: () => _showSongOptions(song),
+                    )),
+          ),
         ],
       ),
       onTap: () {
