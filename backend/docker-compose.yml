@@ -83,7 +83,9 @@ services:
 
   # Elasticsearch for search
   music-search:
-    image: elasticsearch:8.11.1
+    build:
+      context: .
+      dockerfile: elasticsearch.Dockerfile
     ports:
       - "9201:9200"  # External 9201 to avoid conflicts
     environment:

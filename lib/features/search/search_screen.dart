@@ -13,10 +13,11 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
+  // Track Spotify downloads in progress
+  final Set<String> _downloadingSpotifyIds = {};
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   bool _isLoading = false;
-  bool _searchingSpotify = false;
   List<Song> _localResults = [];
   SearchResponse? _spotifyResults;
   String _currentQuery = '';
@@ -30,77 +31,47 @@ class _SearchScreenState extends State<SearchScreen> {
           // Search bar
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'What do you want to listen to?',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon:
-                        _searchController.text.isNotEmpty
-                            ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                setState(() {
-                                  _searchController.clear();
-                                  _isSearching = false;
-                                  _localResults = [];
-                                  _spotifyResults = null;
-                                  _currentQuery = '';
-                                });
-                              },
-                            )
-                            : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor:
-                        Theme.of(context).colorScheme.surfaceContainerHighest,
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _isSearching = value.isNotEmpty;
-                      if (value.isNotEmpty) {
-                        _performLocalSearch(value);
-                      } else {
-                        _localResults = [];
-                        _spotifyResults = null;
-                        _currentQuery = '';
-                      }
-                    });
-                  },
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'What do you want to listen to?',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon:
+                    _searchController.text.isNotEmpty
+                        ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            setState(() {
+                              _searchController.clear();
+                              _isSearching = false;
+                              _localResults = [];
+                              _spotifyResults = null;
+                              _currentQuery = '';
+                            });
+                          },
+                        )
+                        : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
                 ),
-                if (_isSearching && _currentQuery.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed:
-                          _searchingSpotify
-                              ? null
-                              : () => _performSpotifySearch(_currentQuery),
-                      icon:
-                          _searchingSpotify
-                              ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                              : const Icon(Icons.cloud_download),
-                      label: Text(
-                        _searchingSpotify
-                            ? 'Searching Spotify...'
-                            : 'Search Spotify',
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+                filled: true,
+                fillColor:
+                    Theme.of(context).colorScheme.surfaceContainerHighest,
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _isSearching = value.isNotEmpty;
+                  if (value.isNotEmpty) {
+                    _performLocalSearch(value);
+                    _performSpotifySearch(value);
+                  } else {
+                    _localResults = [];
+                    _spotifyResults = null;
+                    _currentQuery = '';
+                  }
+                });
+              },
             ),
           ),
 
@@ -127,9 +98,19 @@ class _SearchScreenState extends State<SearchScreen> {
       final results = await ApiService.instance.searchLocal(searchRequest);
 
       if (mounted) {
+        // Remove any downloading IDs that are now present in local results
+        final downloadingIdsToRemove = <String>[];
+        for (final id in _downloadingSpotifyIds) {
+          if (results.any((song) => song.spotifyId == id)) {
+            downloadingIdsToRemove.add(id);
+          }
+        }
         setState(() {
           _localResults = results;
           _isLoading = false;
+          for (final id in downloadingIdsToRemove) {
+            _downloadingSpotifyIds.remove(id);
+          }
         });
       }
     } catch (e) {
@@ -148,10 +129,6 @@ class _SearchScreenState extends State<SearchScreen> {
   void _performSpotifySearch(String query) async {
     if (query.trim().isEmpty) return;
 
-    setState(() {
-      _searchingSpotify = true;
-    });
-
     try {
       final searchRequest = SearchRequest(query: query.trim());
       final results = await ApiService.instance.searchSpotify(searchRequest);
@@ -159,14 +136,12 @@ class _SearchScreenState extends State<SearchScreen> {
       if (mounted) {
         setState(() {
           _spotifyResults = results;
-          _searchingSpotify = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _spotifyResults = null;
-          _searchingSpotify = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Spotify search failed: ${e.toString()}')),
@@ -176,13 +151,15 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _downloadSpotifySong(String spotifyId) async {
+    setState(() {
+      _downloadingSpotifyIds.add(spotifyId);
+    });
     try {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Starting download...')));
 
       final response = await ApiService.instance.downloadSong(spotifyId);
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -191,7 +168,6 @@ class _SearchScreenState extends State<SearchScreen> {
                 response.status == 'queued' ? Colors.green : Colors.orange,
           ),
         );
-
         // Refresh local search if download was queued
         if (response.status == 'queued' && _currentQuery.isNotEmpty) {
           _performLocalSearch(_currentQuery);
@@ -205,6 +181,10 @@ class _SearchScreenState extends State<SearchScreen> {
             backgroundColor: Colors.red,
           ),
         );
+        // Remove from downloading set on error
+        setState(() {
+          _downloadingSpotifyIds.remove(spotifyId);
+        });
       }
     }
   }
@@ -213,6 +193,29 @@ class _SearchScreenState extends State<SearchScreen> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Build a set of local spotifyIds for deduplication
+    final localSpotifyIds =
+        _localResults
+            .where((song) => song.spotifyId != null)
+            .map((song) => song.spotifyId)
+            .toSet();
+
+    // Filter Spotify results to exclude any with a spotifyId already in local results
+    final dedupedSpotifyResults =
+        _spotifyResults != null
+            ? _spotifyResults!.results
+                .where(
+                  (song) =>
+                      song.spotifyId == null ||
+                      !localSpotifyIds.contains(song.spotifyId),
+                )
+                .toList()
+            : <Song>[];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -240,9 +243,8 @@ class _SearchScreenState extends State<SearchScreen> {
             const SizedBox(height: 24),
           ],
 
-          // Spotify results section
-          if (_spotifyResults != null &&
-              _spotifyResults!.results.isNotEmpty) ...[
+          // Spotify results section (deduplicated)
+          if (_spotifyResults != null && dedupedSpotifyResults.isNotEmpty) ...[
             Text(
               'From Spotify (${_spotifyResults!.total} results)',
               style: Theme.of(
@@ -253,9 +255,9 @@ class _SearchScreenState extends State<SearchScreen> {
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: _spotifyResults!.results.length,
+              itemCount: dedupedSpotifyResults.length,
               itemBuilder: (context, index) {
-                final song = _spotifyResults!.results[index];
+                final song = dedupedSpotifyResults[index];
                 return _buildSongTile(song, isLocal: false);
               },
             ),
@@ -263,8 +265,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
           // No results message
           if (_localResults.isEmpty &&
-              (_spotifyResults == null ||
-                  _spotifyResults!.results.isEmpty)) ...[
+              (_spotifyResults == null || dedupedSpotifyResults.isEmpty)) ...[
             const SizedBox(height: 48),
             Center(
               child: Column(
@@ -294,6 +295,10 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildSongTile(Song song, {required bool isLocal}) {
+    final isSpotifyDownloading =
+        !isLocal &&
+        song.spotifyId != null &&
+        _downloadingSpotifyIds.contains(song.spotifyId);
     return ListTile(
       leading: Container(
         width: 56,
@@ -348,47 +353,61 @@ class _SearchScreenState extends State<SearchScreen> {
           if (song.duration != null)
             Text(song.durationText, style: TextStyle(color: Colors.grey[600])),
           const SizedBox(width: 8),
-          if (isLocal && song.canPlay)
-            Consumer<AudioPlayerService>(
-              builder: (context, audioPlayer, child) {
-                final isCurrentSong = audioPlayer.isCurrentSong(song);
-                final isPlaying = audioPlayer.isSongPlaying(song);
-
-                return IconButton(
-                  icon: Icon(
-                    isCurrentSong && isPlaying ? Icons.pause : Icons.play_arrow,
-                  ),
-                  onPressed: () {
-                    if (isCurrentSong && isPlaying) {
-                      audioPlayer.pause();
-                    } else if (isCurrentSong) {
-                      audioPlayer.resume();
-                    } else {
-                      _playSong(song);
-                    }
-                  },
-                );
-              },
-            )
-          else if (isLocal && song.isDownloading)
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else if (!isLocal)
-            IconButton(
-              icon: const Icon(Icons.download),
-              onPressed:
-                  song.spotifyId != null
-                      ? () => _downloadSpotifySong(song.spotifyId!)
-                      : null,
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.more_vert),
-              onPressed: () => _showSongOptions(song),
-            ),
+          Container(
+            width: 40, // Match IconButton's width
+            alignment: Alignment.center,
+            child:
+                (isLocal && song.canPlay
+                    ? Consumer<AudioPlayerService>(
+                      builder: (context, audioPlayer, child) {
+                        final isCurrentSong = audioPlayer.isCurrentSong(song);
+                        final isPlaying = audioPlayer.isSongPlaying(song);
+                        return IconButton(
+                          icon: Icon(
+                            isCurrentSong && isPlaying
+                                ? Icons.pause
+                                : Icons.play_arrow,
+                          ),
+                          onPressed: () {
+                            if (isCurrentSong && isPlaying) {
+                              audioPlayer.pause();
+                            } else if (isCurrentSong) {
+                              audioPlayer.resume();
+                            } else {
+                              _playSong(song);
+                            }
+                          },
+                        );
+                      },
+                    )
+                    : isLocal && song.isDownloading
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : isSpotifyDownloading
+                    ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                    : !isLocal
+                    ? IconButton(
+                      icon: const Icon(Icons.download),
+                      onPressed:
+                          song.spotifyId != null &&
+                                  !_downloadingSpotifyIds.contains(
+                                    song.spotifyId,
+                                  )
+                              ? () => _downloadSpotifySong(song.spotifyId!)
+                              : null,
+                    )
+                    : IconButton(
+                      icon: const Icon(Icons.more_vert),
+                      onPressed: () => _showSongOptions(song),
+                    )),
+          ),
         ],
       ),
       onTap: () {

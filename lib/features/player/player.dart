@@ -11,6 +11,8 @@ class NowPlayingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final player = context.watch<AudioPlayerService>();
     final song = player.currentSong;
+    final bool isBuffering = player.isLoading;
+    final bool isPlaying = player.isPlaying;
 
     if (song == null) {
       return Scaffold(
@@ -120,28 +122,62 @@ class NowPlayingScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 32),
 
-                      // Position Slider
-                      SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          thumbColor: Theme.of(context).colorScheme.primary,
-                          activeTrackColor:
-                              Theme.of(context).colorScheme.primary,
-                          inactiveTrackColor: Colors.grey.withValues(
-                            alpha: 0.3,
+                      // Position Slider with buffering overlay
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              thumbColor: Colors.white,
+                              activeTrackColor: Colors.white,
+                              inactiveTrackColor: Colors.grey.withValues(
+                                alpha: 0.3,
+                              ),
+                              trackHeight: 4.0,
+                            ),
+                            child: Slider(
+                              min: 0,
+                              max: player.duration.inMilliseconds.toDouble(),
+                              value:
+                                  (!isBuffering && isPlaying)
+                                      ? player.position.inMilliseconds
+                                          .clamp(
+                                            0,
+                                            player.duration.inMilliseconds,
+                                          )
+                                          .toDouble()
+                                      : player.position.inMilliseconds
+                                          .clamp(
+                                            0,
+                                            player.duration.inMilliseconds,
+                                          )
+                                          .toDouble(),
+                              onChanged: (value) {
+                                player.seek(
+                                  Duration(milliseconds: value.toInt()),
+                                );
+                              },
+                            ),
                           ),
-                          trackHeight: 4.0,
-                        ),
-                        child: Slider(
-                          min: 0,
-                          max: player.duration.inMilliseconds.toDouble(),
-                          value:
-                              player.position.inMilliseconds
-                                  .clamp(0, player.duration.inMilliseconds)
-                                  .toDouble(),
-                          onChanged: (value) {
-                            player.seek(Duration(milliseconds: value.toInt()));
-                          },
-                        ),
+                          if (isBuffering)
+                            Positioned.fill(
+                              child: Container(
+                                color: Colors.black.withOpacity(0.15),
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      valueColor: AlwaysStoppedAnimation(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -231,7 +267,7 @@ class NowPlayingScreen extends StatelessWidget {
 }
 
 String _formatDuration(Duration d) {
-  final twoDigits = (int n) => n.toString().padLeft(2, '0');
+  twoDigits(int n) => n.toString().padLeft(2, '0');
   final minutes = twoDigits(d.inMinutes.remainder(60));
   final seconds = twoDigits(d.inSeconds.remainder(60));
   return '$minutes:$seconds';
