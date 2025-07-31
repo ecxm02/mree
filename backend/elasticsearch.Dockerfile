@@ -1,3 +1,3 @@
 FROM docker.elastic.co/elasticsearch/elasticsearch:8.11.1
 
-RUN elasticsearch-plugin install --batch https://github.com/medcl/elasticsearch-analysis-pinyin/releases/download/v8.11.0/elasticsearch-analysis-pinyin-8.11.0.zip
+RUN elasticsearch-plugin install --batch https://release.infinilabs.com/analysis-pinyin/stable/elasticsearch-analysis-pinyin-9.1.0.zip
