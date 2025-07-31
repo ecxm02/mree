@@ -17,13 +17,34 @@ class ElasticsearchService:
         self.songs_index = "songs"
         
     async def ensure_index_exists(self):
-        """Create songs index if it doesn't exist"""
+        """Create songs index with pinyin analyzer if it doesn't exist"""
         if not self.es.indices.exists(index=self.songs_index):
             mapping = {
+                "settings": {
+                    "analysis": {
+                        "analyzer": {
+                            "pinyin_analyzer": {
+                                "tokenizer": "my_pinyin"
+                            }
+                        },
+                        "tokenizer": {
+                            "my_pinyin": {
+                                "type": "pinyin",
+                                "keep_first_letter": True,
+                                "keep_separate_first_letter": False,
+                                "keep_full_pinyin": True,
+                                "keep_original": True,
+                                "limit_first_letter_length": 16,
+                                "lowercase": True,
+                                "remove_duplicated_term": True
+                            }
+                        }
+                    }
+                },
                 "mappings": {
                     "properties": {
                         "spotify_id": {"type": "keyword"},
-                        "title": {"type": "text", "analyzer": "standard"},
+                        "title": {"type": "text", "analyzer": "pinyin_analyzer", "search_analyzer": "pinyin_analyzer"},
                         "artist": {"type": "text", "analyzer": "standard"},
                         "album": {"type": "text", "analyzer": "standard"},
                         "duration": {"type": "integer"},
@@ -33,15 +54,15 @@ class ElasticsearchService:
                         "original_thumbnail_url": {"type": "keyword"},
                         "youtube_url": {"type": "keyword"},
                         "download_count": {"type": "integer"},
-                        "download_status": {"type": "keyword"},  # pending, downloading, completed, failed
+                        "download_status": {"type": "keyword"},
                         "created_at": {"type": "date"},
                         "updated_at": {"type": "date"},
-                        "last_streamed": {"type": "date"}  # Track when song was last played
+                        "last_streamed": {"type": "date"}
                     }
                 }
             }
             self.es.indices.create(index=self.songs_index, body=mapping)
-            logger.info(f"Created Elasticsearch index: {self.songs_index}")
+            logger.info(f"Created Elasticsearch index with pinyin analyzer: {self.songs_index}")
     
     async def add_song(self, song_data: Dict[str, Any]) -> bool:
         """Add or update a song in Elasticsearch"""
