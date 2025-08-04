@@ -228,7 +228,7 @@ async def search_local_songs(
     
     es_service = ElasticsearchService()
     
-    # Strategy 1: Multi-match query with relaxed parameters for partial matching
+    # Strategy 1: Multi-match query with pinyin support for Chinese titles
     multi_match_query = {
         "query": {
             "bool": {
@@ -248,6 +248,26 @@ async def search_local_songs(
                             "max_expansions": SearchConfig.FUZZY_MAX_EXPANSIONS,
                             "minimum_should_match": SearchConfig.MINIMUM_SHOULD_MATCH,
                             "tie_breaker": SearchConfig.TIE_BREAKER
+                        }
+                    }
+                ]
+            }
+        },
+        "size": search.limit
+    }
+    
+    # Strategy 2: Direct pinyin match for Chinese text
+    pinyin_query = {
+        "query": {
+            "bool": {
+                "must": [
+                    {"term": {"download_status": "completed"}},
+                    {
+                        "match": {
+                            "title": {
+                                "query": search.query,
+                                "analyzer": "pinyin_analyzer"
+                            }
                         }
                     }
                 ]
@@ -352,6 +372,7 @@ async def search_local_songs(
     # Execute queries in order of precision (best results first)
     queries = [
         ("multi_match", multi_match_query),
+        ("pinyin", pinyin_query),
         ("prefix", prefix_query),
         ("wildcard", wildcard_query),
         ("ngram", ngram_query)
