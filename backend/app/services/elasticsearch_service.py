@@ -17,8 +17,22 @@ class ElasticsearchService:
         self.songs_index = "songs"
         
     async def ensure_index_exists(self):
-        """Create songs index with pinyin analyzer if it doesn't exist"""
-        if not self.es.indices.exists(index=self.songs_index):
+        """Create songs index with pinyin analyzer, force recreate if mapping is wrong"""
+        try:
+            # Check if index exists and has correct mapping
+            if self.es.indices.exists(index=self.songs_index):
+                current_mapping = self.es.indices.get_mapping(index=self.songs_index)
+                title_mapping = current_mapping.get(self.songs_index, {}).get("mappings", {}).get("properties", {}).get("title", {})
+                
+                # If title field doesn't use pinyin_analyzer, recreate the index
+                if title_mapping.get("analyzer") != "pinyin_analyzer":
+                    logger.warning("Index exists but title field doesn't use pinyin_analyzer. Recreating index...")
+                    self.es.indices.delete(index=self.songs_index)
+                else:
+                    logger.info("Index already exists with correct pinyin mapping")
+                    return
+            
+            # Create index with pinyin analyzer
             mapping = {
                 "settings": {
                     "analysis": {
@@ -63,6 +77,10 @@ class ElasticsearchService:
             }
             self.es.indices.create(index=self.songs_index, body=mapping)
             logger.info(f"Created Elasticsearch index with pinyin analyzer: {self.songs_index}")
+            
+        except Exception as e:
+            logger.error(f"Error ensuring index exists: {e}")
+            raise
     
     async def add_song(self, song_data: Dict[str, Any]) -> bool:
         """Add or update a song in Elasticsearch"""
