@@ -28,11 +28,13 @@ class ElasticsearchService:
                 if title_mapping.get("analyzer") != "pinyin_analyzer":
                     logger.warning("Index exists but title field doesn't use pinyin_analyzer. Recreating index...")
                     self.es.indices.delete(index=self.songs_index)
+                    # Fall through to create new index with pinyin mapping
                 else:
                     logger.info("Index already exists with correct pinyin mapping")
                     return
             
-            # Create index with pinyin analyzer
+            # Create index with pinyin analyzer (both for new index creation and recreation)
+            logger.info(f"Creating new index '{self.songs_index}' with pinyin analyzer...")
             mapping = {
                 "settings": {
                     "analysis": {
