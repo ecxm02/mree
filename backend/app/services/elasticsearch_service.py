@@ -84,9 +84,80 @@ class ElasticsearchService:
             logger.error(f"Error ensuring index exists: {e}")
             raise
     
+    def ensure_index_exists_sync(self):
+        """Synchronous version of ensure_index_exists for Celery tasks"""
+        try:
+            # Check if index exists and has correct mapping
+            if self.es.indices.exists(index=self.songs_index):
+                current_mapping = self.es.indices.get_mapping(index=self.songs_index)
+                title_mapping = current_mapping.get(self.songs_index, {}).get("mappings", {}).get("properties", {}).get("title", {})
+                
+                # If title field doesn't use pinyin_analyzer, recreate the index
+                if title_mapping.get("analyzer") != "pinyin_analyzer":
+                    logger.warning("Index exists but title field doesn't use pinyin_analyzer. Recreating index...")
+                    self.es.indices.delete(index=self.songs_index)
+                    # Fall through to create new index with pinyin mapping
+                else:
+                    logger.info("Index already exists with correct pinyin mapping")
+                    return
+            
+            # Create index with pinyin analyzer (both for new index creation and recreation)
+            logger.info(f"Creating new index '{self.songs_index}' with pinyin analyzer...")
+            mapping = {
+                "settings": {
+                    "analysis": {
+                        "analyzer": {
+                            "pinyin_analyzer": {
+                                "tokenizer": "my_pinyin"
+                            }
+                        },
+                        "tokenizer": {
+                            "my_pinyin": {
+                                "type": "pinyin",
+                                "keep_first_letter": True,
+                                "keep_separate_first_letter": False,
+                                "keep_full_pinyin": True,
+                                "keep_original": True,
+                                "limit_first_letter_length": 16,
+                                "lowercase": True,
+                                "remove_duplicated_term": True
+                            }
+                        }
+                    }
+                },
+                "mappings": {
+                    "properties": {
+                        "spotify_id": {"type": "keyword"},
+                        "title": {"type": "text", "analyzer": "pinyin_analyzer", "search_analyzer": "pinyin_analyzer"},
+                        "artist": {"type": "text", "analyzer": "standard"},
+                        "album": {"type": "text", "analyzer": "standard"},
+                        "duration": {"type": "integer"},
+                        "file_path": {"type": "keyword"},
+                        "file_size": {"type": "long"},
+                        "thumbnail_path": {"type": "keyword"},
+                        "original_thumbnail_url": {"type": "keyword"},
+                        "youtube_url": {"type": "keyword"},
+                        "download_count": {"type": "integer"},
+                        "download_status": {"type": "keyword"},
+                        "created_at": {"type": "date"},
+                        "updated_at": {"type": "date"},
+                        "last_streamed": {"type": "date"}
+                    }
+                }
+            }
+            self.es.indices.create(index=self.songs_index, body=mapping)
+            logger.info(f"Created Elasticsearch index with pinyin analyzer: {self.songs_index}")
+            
+        except Exception as e:
+            logger.error(f"Error ensuring index exists (sync): {e}")
+            raise
+    
     async def add_song(self, song_data: Dict[str, Any]) -> bool:
         """Add or update a song in Elasticsearch"""
         try:
+            # Ensure index exists with correct pinyin mapping
+            await self.ensure_index_exists()
+            
             # Use spotify_id as document ID for uniqueness
             doc_id = song_data["spotify_id"]
             
@@ -255,6 +326,9 @@ class ElasticsearchService:
     def add_song_sync(self, song_data: Dict[str, Any]) -> bool:
         """Synchronous version of add_song for Celery tasks"""
         try:
+            # Ensure index exists with correct pinyin mapping
+            self.ensure_index_exists_sync()
+            
             doc_id = song_data["spotify_id"]
             result = self.es.index(
                 index=self.songs_index,
