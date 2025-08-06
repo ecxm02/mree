@@ -36,9 +36,12 @@ services:
       - ${MUSIC_DOWNLOAD_PATH}:/app/downloads
       - ${BACKUP_PATH}:/app/backups
     depends_on:
-      - music-db
-      - music-redis
-      - music-search
+      music-db:
+        condition: service_healthy
+      music-redis:
+        condition: service_healthy
+      music-search:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -132,9 +135,12 @@ services:
       - ${MUSIC_DOWNLOAD_PATH}:/app/downloads
       - ${BACKUP_PATH}:/app/backups
     depends_on:
-      - music-db
-      - music-redis
-      - music-search
+      music-db:
+        condition: service_healthy
+      music-redis:
+        condition: service_healthy
+      music-search:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "celery -A app.worker.celery_app inspect ping"]
       interval: 30s
@@ -167,9 +173,12 @@ services:
       - ${BACKUP_PATH}:/app/backups
       - ${IMAGE_STORAGE_PATH}:/app/images
     depends_on:
-      - music-db
-      - music-redis
-      - music-search
+      music-db:
+        condition: service_healthy
+      music-redis:
+        condition: service_healthy
+      music-search:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "celery -A app.worker.celery_app inspect ping"]
       interval: 30s

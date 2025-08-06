@@ -4,6 +4,8 @@ import json
 import logging
 from pathlib import Path
 from datetime import datetime
+import time
+import random
 
 from ..config import settings
 from ..constants import SearchConfig
@@ -12,13 +14,50 @@ logger = logging.getLogger(__name__)
 
 class ElasticsearchService:
     def __init__(self):
-        """Initialize Elasticsearch client"""
-        self.es = Elasticsearch([settings.ELASTICSEARCH_URL])
+        """Initialize Elasticsearch client with connection retry logic"""
+        self.es = None
         self.songs_index = "songs"
+        self._connect_with_retry()
+        
+    def _connect_with_retry(self, max_retries=30, base_delay=1):
+        """Connect to Elasticsearch with exponential backoff retry logic"""
+        for attempt in range(max_retries):
+            try:
+                self.es = Elasticsearch(
+                    [settings.ELASTICSEARCH_URL],
+                    timeout=30,
+                    max_retries=3,
+                    retry_on_timeout=True
+                )
+                # Test the connection
+                if self.es.ping():
+                    logger.info(f"Successfully connected to Elasticsearch at {settings.ELASTICSEARCH_URL}")
+                    return
+                else:
+                    raise ConnectionError("Elasticsearch ping failed")
+                    
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    logger.error(f"Failed to connect to Elasticsearch after {max_retries} attempts: {e}")
+                    raise ConnectionError(f"Could not connect to Elasticsearch: {e}")
+                
+                # Calculate delay with jitter to avoid thundering herd
+                delay = min(base_delay * (2 ** attempt), 60) + random.uniform(0, 1)
+                logger.warning(f"Elasticsearch connection attempt {attempt + 1}/{max_retries} failed: {e}. Retrying in {delay:.1f}s...")
+                time.sleep(delay)
+    
+    def _ensure_connected(self):
+        """Ensure we have a valid Elasticsearch connection, reconnect if needed"""
+        if self.es is None or not self.es.ping():
+            logger.warning("Elasticsearch connection lost, attempting to reconnect...")
+            self._connect_with_retry()
         
     async def ensure_index_exists(self):
         """Create songs index with pinyin analyzer, force recreate if mapping is wrong"""
         try:
+            # Ensure we have a valid connection
+            self._ensure_connected()
+            
             # Check if index exists and has correct mapping
             if self.es.indices.exists(index=self.songs_index):
                 current_mapping = self.es.indices.get_mapping(index=self.songs_index)
@@ -87,6 +126,9 @@ class ElasticsearchService:
     def ensure_index_exists_sync(self):
         """Synchronous version of ensure_index_exists for Celery tasks"""
         try:
+            # Ensure we have a valid connection
+            self._ensure_connected()
+            
             # Check if index exists and has correct mapping
             if self.es.indices.exists(index=self.songs_index):
                 current_mapping = self.es.indices.get_mapping(index=self.songs_index)
@@ -177,6 +219,7 @@ class ElasticsearchService:
     async def get_song(self, spotify_id: str) -> Optional[Dict[str, Any]]:
         """Get song by Spotify ID"""
         try:
+            self._ensure_connected()
             result = self.es.get(index=self.songs_index, id=spotify_id)
             return result["_source"]
         except Exception as e:
@@ -186,6 +229,7 @@ class ElasticsearchService:
     async def search_songs(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Search for songs in Elasticsearch with aggressive partial matching"""
         try:
+            self._ensure_connected()
             search_body = {
                 "query": {
                     "multi_match": {
@@ -318,6 +362,7 @@ class ElasticsearchService:
     def get_song_sync(self, spotify_id: str) -> Optional[Dict[str, Any]]:
         """Synchronous version of get_song for Celery tasks"""
         try:
+            self._ensure_connected()
             result = self.es.get(index=self.songs_index, id=spotify_id)
             return result["_source"]
         except Exception:
@@ -407,6 +452,7 @@ class ElasticsearchService:
     def search_raw_sync(self, query: Dict) -> Dict:
         """Execute raw Elasticsearch query (synchronous for Celery tasks)"""
         try:
+            self._ensure_connected()
             return self.es.search(index=self.songs_index, body=query)
         except Exception as e:
             logger.error(f"Error executing raw search: {e}")
@@ -415,6 +461,7 @@ class ElasticsearchService:
     async def search_raw(self, query: Dict) -> Dict:
         """Execute raw Elasticsearch query (async for API endpoints)"""
         try:
+            self._ensure_connected()
             return self.es.search(index=self.songs_index, body=query)
         except Exception as e:
             logger.error(f"Error executing raw search: {e}")
@@ -423,6 +470,7 @@ class ElasticsearchService:
     def get_total_songs(self) -> int:
         """Get total number of songs in the catalog"""
         try:
+            self._ensure_connected()
             result = self.es.count(index=self.songs_index)
             return result.get("count", 0)
         except Exception as e:
