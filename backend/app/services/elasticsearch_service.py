@@ -19,6 +19,39 @@ class ElasticsearchService:
         self.songs_index = "songs"
         self._connect_with_retry()
         
+    # ---------- Diagnostics ----------
+    def has_pinyin_plugin(self) -> bool:
+        """Check if the Elasticsearch pinyin analysis plugin is installed."""
+        try:
+            self._ensure_connected()
+            # cat.plugins returns text by default; request JSON for easier parsing
+            plugins = self.es.cat.plugins(format='json')  # type: ignore[attr-defined]
+            # plugins can be list[dict] or str depending on client; normalize
+            if isinstance(plugins, str):
+                return 'analysis-pinyin' in plugins
+            if isinstance(plugins, list):
+                for p in plugins:
+                    # Known keys: 'component' contains plugin name on ES 8
+                    if 'analysis-pinyin' in str(p.get('component', '')):
+                        return True
+            return False
+        except Exception as e:
+            logger.warning(f"Unable to verify pinyin plugin: {e}")
+            return False
+
+    def title_uses_pinyin(self) -> bool:
+        """Check if the current mapping for 'title' uses pinyin_analyzer."""
+        try:
+            self._ensure_connected()
+            if not self.es.indices.exists(index=self.songs_index):
+                return False
+            current_mapping = self.es.indices.get_mapping(index=self.songs_index)
+            title_mapping = current_mapping.get(self.songs_index, {}).get("mappings", {}).get("properties", {}).get("title", {})
+            return title_mapping.get("analyzer") == "pinyin_analyzer"
+        except Exception as e:
+            logger.warning(f"Unable to verify title mapping: {e}")
+            return False
+        
     def _connect_with_retry(self, max_retries=30, base_delay=1):
         """Connect to Elasticsearch with exponential backoff retry logic"""
         for attempt in range(max_retries):
@@ -58,6 +91,10 @@ class ElasticsearchService:
             # Ensure we have a valid connection
             self._ensure_connected()
             
+            # Fail fast if pinyin plugin isn't installed
+            if not self.has_pinyin_plugin():
+                raise RuntimeError("Elasticsearch pinyin plugin not installed. Install analysis-pinyin plugin and restart Elasticsearch.")
+            
             # Check if index exists and has correct mapping
             if self.es.indices.exists(index=self.songs_index):
                 current_mapping = self.es.indices.get_mapping(index=self.songs_index)
@@ -120,6 +157,10 @@ class ElasticsearchService:
             logger.info(f"Created Elasticsearch index with pinyin analyzer: {self.songs_index}")
             
         except Exception as e:
+            # Provide clearer guidance when plugin is missing
+            msg = str(e)
+            if 'unknown tokenizer' in msg.lower() or 'pinyin' in msg.lower():
+                logger.error("Failed to create index with pinyin analyzer. Ensure the analysis-pinyin plugin is installed in Elasticsearch.")
             logger.error(f"Error ensuring index exists: {e}")
             raise
     
@@ -129,6 +170,10 @@ class ElasticsearchService:
             # Ensure we have a valid connection
             self._ensure_connected()
             
+            # Fail fast if pinyin plugin isn't installed
+            if not self.has_pinyin_plugin():
+                raise RuntimeError("Elasticsearch pinyin plugin not installed. Install analysis-pinyin plugin and restart Elasticsearch.")
+            
             # Check if index exists and has correct mapping
             if self.es.indices.exists(index=self.songs_index):
                 current_mapping = self.es.indices.get_mapping(index=self.songs_index)
@@ -191,6 +236,9 @@ class ElasticsearchService:
             logger.info(f"Created Elasticsearch index with pinyin analyzer: {self.songs_index}")
             
         except Exception as e:
+            msg = str(e)
+            if 'unknown tokenizer' in msg.lower() or 'pinyin' in msg.lower():
+                logger.error("Failed to create index with pinyin analyzer. Ensure the analysis-pinyin plugin is installed in Elasticsearch.")
             logger.error(f"Error ensuring index exists (sync): {e}")
             raise
     

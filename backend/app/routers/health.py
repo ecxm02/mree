@@ -71,11 +71,22 @@ async def check_elasticsearch() -> ComponentHealth:
         response_time = (time.time() - start_time) * 1000
         
         status = "healthy" if es_status in ["green", "yellow", "available"] else "degraded"
+
+        # Pinyin readiness details
+        pinyin_plugin = es_service.has_pinyin_plugin()
+        title_pinyin = es_service.title_uses_pinyin()
+        if not pinyin_plugin or not title_pinyin:
+            # degrade status if pinyin not ready
+            status = "degraded" if status == "healthy" else status
         
         return ComponentHealth(
             status=status,
             response_time_ms=response_time,
-            details={"cluster_status": es_status}
+            details={
+                "cluster_status": es_status,
+                "pinyin_plugin": pinyin_plugin,
+                "title_uses_pinyin": title_pinyin
+            }
         )
     except Exception as e:
         response_time = (time.time() - start_time) * 1000

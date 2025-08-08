@@ -1,27 +1,10 @@
-# 🎵 Music Streaming Backend - Raspberry Pi Deployment
+# 🎵 Music Streaming Backend - Linux/Raspberry Pi Deployment
 
 This backend provides a complete music streaming API with Spotify integration and YouTube downloads.
 
 ## 🚀 Quick Start on Raspberry Pi
 
-### Method 1: Using PowerShell (from Windows)
-
-1. **From your Windows machine (in the mree directory):**
-   ```powershell
-   cd backend
-   .\deploy-to-pi.ps1 -PiIP "192.168.1.100"
-   ```
-   Replace `192.168.1.100` with your Pi's IP address.
-
-2. **SSH to your Pi and run the deployment:**
-   ```bash
-   ssh pi@192.168.1.100
-   cd /home/pi/mree-backend
-   chmod +x deploy.sh
-   ./deploy.sh
-   ```
-
-### Method 2: Manual Copy
+### Deployment
 
 1. **Copy files to your Pi** (using WinSCP, git, or USB):
    ```bash
@@ -71,7 +54,7 @@ http://YOUR_PI_IP:8000
 
 ```bash
 # View logs
-docker-compose logs -f app
+docker-compose logs -f music-api
 
 # Check status
 docker-compose ps

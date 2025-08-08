@@ -1,4 +1,4 @@
-# Deployment Guide for Raspberry Pi
+# Deployment Guide (Linux / Raspberry Pi)
 
 ## Prerequisites on Raspberry Pi
 1. Docker and Docker Compose installed
@@ -24,7 +24,7 @@ cp .env.example .env
 
 ### 3. Build and start services
 ```bash
-# Build the FastAPI app
+# Build images
 docker-compose build
 
 # Start all services (PostgreSQL, Redis, Elasticsearch, FastAPI)
@@ -36,8 +36,8 @@ docker-compose ps
 
 ### 4. Initialize the database
 ```bash
-# Run database migrations
-docker-compose exec app python -c "from app.database import init_db; import asyncio; asyncio.run(init_db())"
+# Initialize database tables
+docker-compose exec music-api python -c "from app.database import init_db; import asyncio; asyncio.run(init_db())"
 ```
 
 ### 5. Test the API
@@ -55,7 +55,7 @@ Update your Flutter app to point to: `http://your-pi-ip:8000`
 ## Useful Commands
 ```bash
 # View logs
-docker-compose logs -f app
+docker-compose logs -f music-api
 
 # Restart services
 docker-compose restart

@@ -1,3 +1,54 @@
+# General
+.DS_Store
+.idea/
+.vscode/
+*.iml
+*.log
+
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub/
+.pub-cache/
+build/
+flutter_export_environment.sh
+ios/Flutter/.last_build_id
+
+# Android
+android/.gradle/
+android/app/debug/
+android/app/profile/
+android/app/release/
+
+# Web build
+web/.dart_tool/
+
+# Windows/Linux/Mac builds
+windows/runner/Debug/
+linux/runner/Debug/
+macos/Runner/Debug/
+
+# Python (backend)
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.cache/
+venv/
+.venv/
+env/
+.env
+backend/.env
+
+# Docker / data
+backend/data/
+backend/*.db
+
+# IntelliJ / Android Studio
+.gradle/
+.cxx/
 # Miscellaneous
 *.class
 *.log
